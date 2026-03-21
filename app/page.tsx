@@ -92,7 +92,7 @@ export default function Page() {
           loading={loading} setInput={setInput} onSend={send}
           onReset={()=>{setStep("form");setMessages([]);setResult(null);setPartnerSaju(null);}}
           showPartner={showPartner} setShowPartner={setShowPartner}
-          partner={partner} updP={updP} analyzePartner={analyzePartner}
+          partner={partner} setPartner={setPartner} updP={updP} analyzePartner={analyzePartner}
           partnerSaju={partnerSaju}
         />
       )}
@@ -144,7 +144,7 @@ function renderInline(text: string) {
   });
 }
 
-function ChatView({result,form,messages,input,loading,setInput,onSend,onReset,showPartner,setShowPartner,partner,updP,analyzePartner,partnerSaju}:any) {
+function ChatView({result,form,messages,input,loading,setInput,onSend,onReset,showPartner,setShowPartner,partner,setPartner,updP,analyzePartner,partnerSaju}:any) {
   const {saju,daeun,currentDaeun,seun} = result as SajuResult;
   const counts = ohCounts(saju);
   const pillars = [
