@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     // 스트리밍 응답
     const stream = await client.messages.stream({
       model: "claude-sonnet-4-6",
-      max_tokens: 1024,
+      max_tokens: 2048,
       system: SYSTEM_PROMPT + "\n\n" + sajuContext,
       messages,
     });
