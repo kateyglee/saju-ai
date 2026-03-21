@@ -7,6 +7,7 @@ export const OH     = ["목","화","토","금","수"];
 export const OH_HJ  = ["木","火","土","金","水"];
 export const CG_OH  = [0,0,1,1,2,2,3,3,4,4];
 export const JJ_OH  = [4,2,0,0,2,1,1,2,3,3,2,4];
+export const OH_C   = ["#5dba7d","#e8804a","#c4a96a","#8fa8c0","#5b9bd5"];
 
 export const HOURS = [
   {v:0,  l:"자시 子 00~01시"},
