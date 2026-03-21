@@ -5,7 +5,7 @@ import type { SajuResult, DaeunItem, Saju } from "@/lib/saju";
 
 interface Message { role: "user" | "assistant"; content: string; }
 interface Form { year: string; month: string; day: string; hour: number; gender: string; }
-interface PartnerForm { year: string; month: string; day: string; gender: string; }
+interface PartnerForm { year: string; month: string; day: string; hour: number; gender: string; }
 
 export default function Page() {
   const [step, setStep]           = useState<"form"|"chat">("form");
@@ -16,7 +16,7 @@ export default function Page() {
   const [input, setInput]         = useState("");
   const [loading, setLoading]     = useState(false);
   const [showPartner, setShowPartner] = useState(false);
-  const [partner, setPartner]     = useState<PartnerForm>({ year:"", month:"", day:"", gender:"M" });
+  const [partner, setPartner]     = useState<PartnerForm>({ year:"", month:"", day:"", hour:-1, gender:"M" });
   const [partnerSaju, setPartnerSaju] = useState<Saju | null>(null);
 
   const upd = (k: keyof Form, v: string|number) => setForm(p => ({...p,[k]:v}));
@@ -40,7 +40,7 @@ export default function Page() {
   // 궁합 분석 실행
   function analyzePartner() {
     if (!partner.year||!partner.month||!partner.day) return;
-    const ps = calcSaju(+partner.year,+partner.month,+partner.day,-1);
+    const ps = calcSaju(+partner.year,+partner.month,+partner.day,+partner.hour);
     setPartnerSaju(ps);
     setShowPartner(false);
 
@@ -245,6 +245,13 @@ function ChatView({result,form,messages,input,loading,setInput,onSend,onReset,sh
                   value={(partner as any)[k]} onChange={e=>updP(k,e.target.value)}/>
               </div>
             ))}
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+              <span style={{fontSize:11,color:"#8a7040",width:16}}>시</span>
+              <select style={{...S.sel,fontSize:11,padding:"5px 8px"}} value={partner.hour}
+                onChange={e=>setPartner((p:any)=>({...p,hour:+e.target.value}))}>
+                {HOURS.map((o:any)=><option key={o.v} value={o.v}>{o.l}</option>)}
+              </select>
+            </div>
             <div style={{display:"flex",gap:6,marginBottom:12}}>
               {([["F","여성"],["M","남성"]] as const).map(([v,l])=>(
                 <button key={v} style={{...S.gb,flex:1,fontSize:11,padding:"5px 0",...(partner.gender===v?S.gbOn:{})}}
