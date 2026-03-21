@@ -26,7 +26,10 @@ const SYSTEM_PROMPT = `당신은 한국 전통 명리학(사주팔자) 전문 AI
 4. 천간·지지 합충 — 특수한 에너지 변화
 5. 현재 나이 기준 대운 흐름
 
-[중요]
+[답변 형식]
+- 마크다운 테이블(| | |) 사용 금지 — 대신 글머리(•)나 문단으로 표현
+- 답변은 반드시 완결되게 끝맺음 — 절대 중간에 끊지 말것
+- 너무 길면 핵심만 요약해서 완성도 있게 마무리
 - 사용자 사주 데이터는 아래 컨텍스트에 제공됩니다
 - 이 데이터를 항상 참고하여 개인화된 답변을 하세요
 - 계산은 이미 완료된 데이터를 사용하며 직접 재계산하지 마세요`;
@@ -38,7 +41,7 @@ export async function POST(req: NextRequest) {
     // 스트리밍 응답
     const stream = await client.messages.stream({
       model: "claude-sonnet-4-6",
-      max_tokens: 2048,
+      max_tokens: 4096,
       system: SYSTEM_PROMPT + "\n\n" + sajuContext,
       messages,
     });
