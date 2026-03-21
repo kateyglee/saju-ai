@@ -108,6 +108,14 @@ function FormView({form,upd,onSubmit}:{form:Form;upd:any;onSubmit:()=>void}) {
   );
 }
 
+function renderInline(text: string) {
+  return text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/).map((part,i)=>{
+    if(part.startsWith("**")&&part.endsWith("**")) return <strong key={i}>{part.slice(2,-2)}</strong>;
+    if(part.startsWith("*")&&part.endsWith("*")) return <em key={i}>{part.slice(1,-1)}</em>;
+    return <span key={i}>{part}</span>;
+  });
+}
+
 function ChatView({result,form,messages,input,loading,setInput,onSend,onReset}:any) {
   const {saju,daeun,currentDaeun,seun} = result as SajuResult;
   const counts = ohCounts(saju);
@@ -207,16 +215,18 @@ function ChatView({result,form,messages,input,loading,setInput,onSend,onReset}:a
             <div key={i} style={{display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start",marginBottom:16}}>
               {m.role==="assistant" && <div style={S.aiAvatar}>命</div>}
               <div style={{...S.bubble,...(m.role==="user"?S.bubbleUser:S.bubbleAI),maxWidth:"75%"}}>
-                {m.content.split("\n").map((line,j)=>(
-                  <span key={j}>
-                    {line.split(/(\*\*[^*]+\*\*)/).map((part,k)=>
-                      part.startsWith("**")&&part.endsWith("**")
-                        ? <strong key={k}>{part.slice(2,-2)}</strong>
-                        : part
-                    )}
-                    {j<m.content.split("\n").length-1&&<br/>}
-                  </span>
-                ))}
+                {m.content.split("\n").map((line,j)=>{
+                  // 마크다운 렌더링
+                  if(line.startsWith("### ")) return <h4 key={j} style={{fontSize:13,fontWeight:"bold",color:"#5a3e14",margin:"12px 0 4px"}}>{line.slice(4)}</h4>;
+                  if(line.startsWith("## ")) return <h3 key={j} style={{fontSize:14,fontWeight:"bold",color:"#3a2a0a",margin:"14px 0 6px"}}>{line.slice(3)}</h3>;
+                  if(line.startsWith("# ")) return <h2 key={j} style={{fontSize:16,fontWeight:"bold",color:"#3a2a0a",margin:"16px 0 8px"}}>{line.slice(2)}</h2>;
+                  if(line.startsWith("> ")) return <blockquote key={j} style={{borderLeft:"3px solid #c4952a",paddingLeft:10,color:"#7a5a28",margin:"8px 0",fontStyle:"italic"}}>{line.slice(2)}</blockquote>;
+                  if(line.startsWith("- ")) return <div key={j} style={{display:"flex",gap:8,margin:"3px 0"}}><span style={{color:"#c4952a",flexShrink:0}}>•</span><span>{renderInline(line.slice(2))}</span></div>;
+                  if(line.match(/^\d+\. /)) return <div key={j} style={{display:"flex",gap:8,margin:"3px 0"}}><span style={{color:"#c4952a",flexShrink:0}}>{line.match(/^\d+/)?.[0]}.</span><span>{renderInline(line.replace(/^\d+\. /,""))}</span></div>;
+                  if(line==="---"||line==="***") return <hr key={j} style={{border:"none",borderTop:"1px solid #e8d8b0",margin:"12px 0"}}/>;
+                  if(line==="") return <br key={j}/>;
+                  return <div key={j} style={{margin:"2px 0"}}>{renderInline(line)}</div>;
+                })}
               </div>
             </div>
           ))}
