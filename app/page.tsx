@@ -432,63 +432,63 @@ function SideSection({ label, children, right }: { label: string; children: Reac
 // ── 입력 폼 (라이트 테마) ────────────────────────────────────────────────────
 function FormPage({ form, upd, onSubmit }: { form: Form; upd: any; onSubmit: () => void }) {
   return (
-    <div className="light" style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 16px" }}>
+    <div className="light" style={{ minHeight: "100vh", background: "#FAFAFA", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 16px" }}>
       <div style={{ width: "100%", maxWidth: 440 }}>
 
         {/* 로고 */}
         <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 52, height: 52, borderRadius: "50%", background: "var(--surface-md)", marginBottom: 16 }}>
+          <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 52, height: 52, borderRadius: "50%", background: "#EFEFF2", marginBottom: 16 }}>
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="4" fill="var(--text-primary)"/>
-              <circle cx="12" cy="12" r="7" stroke="var(--text-primary)" strokeWidth="1" strokeOpacity="0.35"/>
-              <circle cx="12" cy="12" r="10.5" stroke="var(--text-primary)" strokeWidth="0.5" strokeOpacity="0.2"/>
+              <circle cx="12" cy="12" r="4" fill="#111116"/>
+              <circle cx="12" cy="12" r="7" stroke="#111116" strokeWidth="1" strokeOpacity="0.35"/>
+              <circle cx="12" cy="12" r="10.5" stroke="#111116" strokeWidth="0.5" strokeOpacity="0.2"/>
             </svg>
           </div>
-          <p style={{ fontFamily: "var(--font-display)", fontSize: 9, fontWeight: 500, letterSpacing: "0.28em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: 16 }}>사주팔자 · AI 운명 상담</p>
-          <h1 style={{ fontFamily: "var(--font-body)", fontSize: 36, fontWeight: 600, letterSpacing: "-0.02em", color: "var(--text-primary)", margin: "0 0 8px" }}>Aura</h1>
-          <p style={{ fontFamily: "var(--font-body)", fontSize: 14, color: "var(--text-lt)" }}>사주팔자 기반 AI 운명 상담</p>
+          <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.28em", textTransform: "uppercase", color: "#9898A4", marginBottom: 16 }}>사주팔자 · AI 운명 상담</p>
+          <h1 style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 36, fontWeight: 600, letterSpacing: "-0.02em", color: "#111116", margin: "0 0 8px" }}>Aura</h1>
+          <p style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, color: "#6B6B78" }}>사주팔자 기반 AI 운명 상담</p>
         </div>
 
         {/* 카드 */}
-        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", padding: "32px 28px", boxShadow: "var(--shadow-md)" }}>
-          <p style={{ fontFamily: "var(--font-display)", fontSize: 9, fontWeight: 500, letterSpacing: "0.20em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: 24 }}>생년월일시 입력</p>
+        <div style={{ background: "#FFFFFF", border: "1px solid #E2E2E8", borderRadius: "10px", padding: "32px 28px", boxShadow: "0 4px 12px rgba(17,17,22,0.08)" }}>
+          <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.20em", textTransform: "uppercase", color: "#9898A4", marginBottom: 24 }}>생년월일시 입력</p>
 
           <div style={{ marginBottom: 16 }}>
-            <label style={{ fontFamily: "var(--font-display)", fontSize: 9, fontWeight: 500, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-muted)", display: "block", marginBottom: 6 }}>이름</label>
-            <input style={{ width: "100%", background: "var(--surface)", border: "1px solid var(--border-dk)", borderRadius: "var(--radius)", padding: "10px 14px", fontFamily: "var(--font-display)", fontSize: 14, color: "var(--text-primary)", outline: "none", letterSpacing: "0.02em" }}
+            <label style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.14em", textTransform: "uppercase", color: "#9898A4", display: "block", marginBottom: 6 }}>이름</label>
+            <input style={{ width: "100%", background: "#FFFFFF", border: "1px solid #C8C8D0", borderRadius: "4px", padding: "10px 14px", fontFamily: "'Geist Mono', monospace", fontSize: 14, color: "#111116", outline: "none", letterSpacing: "0.02em" }}
               type="text" placeholder="예: 홍길동" value={form.name} onChange={e => upd("name", e.target.value)}
-              onFocus={e => { e.currentTarget.style.borderColor = "var(--border-accent)"; e.currentTarget.style.boxShadow = "0 0 0 3px var(--accent-dim)"; }}
-              onBlur={e => { e.currentTarget.style.borderColor = "var(--border-dk)"; e.currentTarget.style.boxShadow = "none"; }} />
+              onFocus={e => { e.currentTarget.style.borderColor = "rgba(46,46,56,0.25)"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(46,46,56,0.06)"; }}
+              onBlur={e => { e.currentTarget.style.borderColor = "#C8C8D0"; e.currentTarget.style.boxShadow = "none"; }} />
           </div>
 
           <div style={{ marginBottom: 16 }}>
-            <label style={{ fontFamily: "var(--font-display)", fontSize: 9, fontWeight: 500, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-muted)", display: "block", marginBottom: 6 }}>생년</label>
-            <input style={{ width: "100%", background: "var(--surface)", border: "1px solid var(--border-dk)", borderRadius: "var(--radius)", padding: "10px 14px", fontFamily: "var(--font-display)", fontSize: 14, color: "var(--text-primary)", outline: "none", letterSpacing: "0.02em" }}
+            <label style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.14em", textTransform: "uppercase", color: "#9898A4", display: "block", marginBottom: 6 }}>생년</label>
+            <input style={{ width: "100%", background: "#FFFFFF", border: "1px solid #C8C8D0", borderRadius: "4px", padding: "10px 14px", fontFamily: "'Geist Mono', monospace", fontSize: 14, color: "#111116", outline: "none", letterSpacing: "0.02em" }}
               type="number" placeholder="예: 1990" value={form.year} onChange={e => upd("year", e.target.value)}
-              onFocus={e => { e.currentTarget.style.borderColor = "var(--border-accent)"; e.currentTarget.style.boxShadow = "0 0 0 3px var(--accent-dim)"; }}
-              onBlur={e => { e.currentTarget.style.borderColor = "var(--border-dk)"; e.currentTarget.style.boxShadow = "none"; }} />
+              onFocus={e => { e.currentTarget.style.borderColor = "rgba(46,46,56,0.25)"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(46,46,56,0.06)"; }}
+              onBlur={e => { e.currentTarget.style.borderColor = "#C8C8D0"; e.currentTarget.style.boxShadow = "none"; }} />
           </div>
           <div style={{ marginBottom: 16 }}>
-            <label style={{ fontFamily: "var(--font-display)", fontSize: 9, fontWeight: 500, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-muted)", display: "block", marginBottom: 6 }}>생월</label>
-            <input style={{ width: "100%", background: "var(--surface)", border: "1px solid var(--border-dk)", borderRadius: "var(--radius)", padding: "10px 14px", fontFamily: "var(--font-display)", fontSize: 14, color: "var(--text-primary)", outline: "none", letterSpacing: "0.02em" }}
+            <label style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.14em", textTransform: "uppercase", color: "#9898A4", display: "block", marginBottom: 6 }}>생월</label>
+            <input style={{ width: "100%", background: "#FFFFFF", border: "1px solid #C8C8D0", borderRadius: "4px", padding: "10px 14px", fontFamily: "'Geist Mono', monospace", fontSize: 14, color: "#111116", outline: "none", letterSpacing: "0.02em" }}
               type="number" placeholder="1-12" value={form.month} onChange={e => upd("month", e.target.value)}
-              onFocus={e => { e.currentTarget.style.borderColor = "var(--border-accent)"; e.currentTarget.style.boxShadow = "0 0 0 3px var(--accent-dim)"; }}
-              onBlur={e => { e.currentTarget.style.borderColor = "var(--border-dk)"; e.currentTarget.style.boxShadow = "none"; }} />
+              onFocus={e => { e.currentTarget.style.borderColor = "rgba(46,46,56,0.25)"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(46,46,56,0.06)"; }}
+              onBlur={e => { e.currentTarget.style.borderColor = "#C8C8D0"; e.currentTarget.style.boxShadow = "none"; }} />
           </div>
           <div style={{ marginBottom: 16 }}>
-            <label style={{ fontFamily: "var(--font-display)", fontSize: 9, fontWeight: 500, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-muted)", display: "block", marginBottom: 6 }}>생일</label>
-            <input style={{ width: "100%", background: "var(--surface)", border: "1px solid var(--border-dk)", borderRadius: "var(--radius)", padding: "10px 14px", fontFamily: "var(--font-display)", fontSize: 14, color: "var(--text-primary)", outline: "none", letterSpacing: "0.02em" }}
+            <label style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.14em", textTransform: "uppercase", color: "#9898A4", display: "block", marginBottom: 6 }}>생일</label>
+            <input style={{ width: "100%", background: "#FFFFFF", border: "1px solid #C8C8D0", borderRadius: "4px", padding: "10px 14px", fontFamily: "'Geist Mono', monospace", fontSize: 14, color: "#111116", outline: "none", letterSpacing: "0.02em" }}
               type="number" placeholder="1-31" value={form.day} onChange={e => upd("day", e.target.value)}
-              onFocus={e => { e.currentTarget.style.borderColor = "var(--border-accent)"; e.currentTarget.style.boxShadow = "0 0 0 3px var(--accent-dim)"; }}
-              onBlur={e => { e.currentTarget.style.borderColor = "var(--border-dk)"; e.currentTarget.style.boxShadow = "none"; }} />
+              onFocus={e => { e.currentTarget.style.borderColor = "rgba(46,46,56,0.25)"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(46,46,56,0.06)"; }}
+              onBlur={e => { e.currentTarget.style.borderColor = "#C8C8D0"; e.currentTarget.style.boxShadow = "none"; }} />
           </div>
 
           <div style={{ marginBottom: 16 }}>
-            <label style={{ fontFamily: "var(--font-display)", fontSize: 9, fontWeight: 500, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-muted)", display: "block", marginBottom: 6 }}>생시</label>
+            <label style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.14em", textTransform: "uppercase", color: "#9898A4", display: "block", marginBottom: 6 }}>생시</label>
             <select style={{
-              width: "100%", background: "var(--surface)", border: "1px solid var(--border-dk)",
-              borderRadius: "var(--radius)", padding: "10px 14px",
-              fontFamily: "var(--font-display)", fontSize: 13, color: "var(--text-primary)",
+              width: "100%", background: "#FFFFFF", border: "1px solid #C8C8D0",
+              borderRadius: "4px", padding: "10px 14px",
+              fontFamily: "'Geist Mono', monospace", fontSize: 13, color: "#111116",
               outline: "none", cursor: "pointer",
             }} value={form.hour} onChange={e => upd("hour", +e.target.value)}>
               {HOURS.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
@@ -496,17 +496,17 @@ function FormPage({ form, upd, onSubmit }: { form: Form; upd: any; onSubmit: () 
           </div>
 
           <div style={{ marginBottom: 28 }}>
-            <label style={{ fontFamily: "var(--font-display)", fontSize: 9, fontWeight: 500, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-muted)", display: "block", marginBottom: 6 }}>성별</label>
+            <label style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.14em", textTransform: "uppercase", color: "#9898A4", display: "block", marginBottom: 6 }}>성별</label>
             <div style={{ display: "flex", gap: 8 }}>
               {([["F", "여성"], ["M", "남성"]] as const).map(([v, l]) => (
                 <button key={v} onClick={() => upd("gender", v)} style={{
                   flex: 1, padding: "10px 0",
-                  background: form.gender === v ? "var(--accent-dim)" : "var(--btn-outline-bg)",
-                  border: `1px solid ${form.gender === v ? "var(--border-accent)" : "var(--border-dk)"}`,
-                  borderRadius: "var(--radius)",
-                  fontFamily: "var(--font-display)", fontSize: 11, fontWeight: 600,
+                  background: form.gender === v ? "rgba(46,46,56,0.06)" : "#FFFFFF",
+                  border: `1px solid ${form.gender === v ? "rgba(46,46,56,0.25)" : "#C8C8D0"}`,
+                  borderRadius: "4px",
+                  fontFamily: "'Geist Mono', monospace", fontSize: 11, fontWeight: 600,
                   letterSpacing: "0.08em", textTransform: "uppercase",
-                  color: form.gender === v ? "var(--text-accent)" : "var(--text-md)",
+                  color: form.gender === v ? "#2E2E38" : "#3A3A44",
                   cursor: "pointer", transition: "all 0.12s",
                 }}>{l}</button>
               ))}
@@ -515,14 +515,14 @@ function FormPage({ form, upd, onSubmit }: { form: Form; upd: any; onSubmit: () 
 
           <button onClick={onSubmit} style={{
             width: "100%", padding: "12px 0",
-            background: "var(--btn-primary-bg)",
-            border: "none", borderRadius: "var(--radius)",
-            fontFamily: "var(--font-display)", fontSize: 12, fontWeight: 600,
-            letterSpacing: "0.10em", textTransform: "uppercase", color: "var(--btn-primary-text)",
+            background: "#2E2E38",
+            border: "none", borderRadius: "4px",
+            fontFamily: "'Geist Mono', monospace", fontSize: 12, fontWeight: 600,
+            letterSpacing: "0.10em", textTransform: "uppercase", color: "#FFFFFF",
             cursor: "pointer", transition: "background 0.15s",
           }}
-            onMouseEnter={e => (e.currentTarget.style.background = "var(--btn-primary-hover)")}
-            onMouseLeave={e => (e.currentTarget.style.background = "var(--btn-primary-bg)")}>
+            onMouseEnter={e => (e.currentTarget.style.background = "#1A1A24")}
+            onMouseLeave={e => (e.currentTarget.style.background = "#2E2E38")}>
             사주 분석 시작
           </button>
         </div>
