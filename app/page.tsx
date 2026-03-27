@@ -10,7 +10,7 @@ interface PartnerForm { year: string; month: string; day: string; hour: number; 
 // ── 인라인 마크다운 렌더 ──────────────────────────────────────────────────────
 function renderInline(text: string) {
   return text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/).map((part, i) => {
-    if (part.startsWith("**") && part.endsWith("**")) return <strong key={i} style={{ fontWeight: 600, color: "var(--text-primary)" }}>{part.slice(2, -2)}</strong>;
+    if (part.startsWith("**") && part.endsWith("**")) return <strong key={i} style={{ fontWeight: 600, color: "#111116" }}>{part.slice(2, -2)}</strong>;
     if (part.startsWith("*") && part.endsWith("*")) return <em key={i}>{part.slice(1, -1)}</em>;
     return <span key={i}>{part}</span>;
   });
@@ -18,15 +18,15 @@ function renderInline(text: string) {
 
 function renderContent(content: string, isUser: boolean) {
   return content.split("\n").map((line, j) => {
-    if (line.startsWith("### ")) return <p key={j} style={{ fontFamily: "var(--font-display)", fontSize: 11, fontWeight: 600, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--text-accent-dk)", margin: "16px 0 6px" }}>{line.slice(4)}</p>;
-    if (line.startsWith("## ")) return <p key={j} style={{ fontFamily: "var(--font-display)", fontSize: 13, fontWeight: 600, color: "var(--text-accent)", margin: "16px 0 8px" }}>{line.slice(3)}</p>;
-    if (line.startsWith("# ")) return <p key={j} style={{ fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 600, color: "var(--text-primary)", margin: "16px 0 8px" }}>{line.slice(2)}</p>;
-    if (line.startsWith("> ")) return <div key={j} style={{ borderLeft: "2px solid var(--border-accent)", paddingLeft: 12, color: "var(--text-md)", margin: "8px 0", fontStyle: "italic" }}>{line.slice(2)}</div>;
-    if (line.startsWith("- ")) return <div key={j} style={{ display: "flex", gap: 8, margin: "4px 0" }}><span style={{ color: "var(--text-accent-dk)", flexShrink: 0, fontFamily: "var(--font-display)", fontSize: 11 }}>—</span><span style={{ color: "var(--text-md)" }}>{renderInline(line.slice(2))}</span></div>;
-    if (line.match(/^\d+\. /)) return <div key={j} style={{ display: "flex", gap: 8, margin: "4px 0" }}><span style={{ color: "var(--text-accent-dk)", flexShrink: 0, fontFamily: "var(--font-display)", fontSize: 11, minWidth: 16 }}>{line.match(/^\d+/)?.[0]}.</span><span style={{ color: "var(--text-md)" }}>{renderInline(line.replace(/^\d+\. /, ""))}</span></div>;
-    if (line === "---" || line === "***") return <hr key={j} style={{ border: "none", borderTop: "1px solid var(--border)", margin: "12px 0" }} />;
+    if (line.startsWith("### ")) return <p key={j} style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11, fontWeight: 600, letterSpacing: "0.16em", textTransform: "uppercase", color: "#9898A8", margin: "16px 0 6px" }}>{line.slice(4)}</p>;
+    if (line.startsWith("## ")) return <p key={j} style={{ fontFamily: "'Geist Mono', monospace", fontSize: 13, fontWeight: 600, color: "#2E2E38", margin: "16px 0 8px" }}>{line.slice(3)}</p>;
+    if (line.startsWith("# ")) return <p key={j} style={{ fontFamily: "'Geist Mono', monospace", fontSize: 14, fontWeight: 600, color: "#111116", margin: "16px 0 8px" }}>{line.slice(2)}</p>;
+    if (line.startsWith("> ")) return <div key={j} style={{ borderLeft: "2px solid rgba(46,46,56,0.25)", paddingLeft: 12, color: "#3A3A44", margin: "8px 0", fontStyle: "italic" }}>{line.slice(2)}</div>;
+    if (line.startsWith("- ")) return <div key={j} style={{ display: "flex", gap: 8, margin: "4px 0" }}><span style={{ color: "#9898A8", flexShrink: 0, fontFamily: "'Geist Mono', monospace", fontSize: 11 }}>—</span><span style={{ color: "#3A3A44" }}>{renderInline(line.slice(2))}</span></div>;
+    if (line.match(/^\d+\. /)) return <div key={j} style={{ display: "flex", gap: 8, margin: "4px 0" }}><span style={{ color: "#9898A8", flexShrink: 0, fontFamily: "'Geist Mono', monospace", fontSize: 11, minWidth: 16 }}>{line.match(/^\d+/)?.[0]}.</span><span style={{ color: "#3A3A44" }}>{renderInline(line.replace(/^\d+\. /, ""))}</span></div>;
+    if (line === "---" || line === "***") return <hr key={j} style={{ border: "none", borderTop: "1px solid #E2E2E8", margin: "12px 0" }} />;
     if (line === "") return <div key={j} style={{ height: 8 }} />;
-    return <div key={j} style={{ color: isUser ? "rgba(255,255,255,0.92)" : "var(--text-md)", lineHeight: 1.7 }}>{renderInline(line)}</div>;
+    return <div key={j} style={{ color: isUser ? "rgba(255,255,255,0.92)" : "#3A3A44", lineHeight: 1.7 }}>{renderInline(line)}</div>;
   });
 }
 
@@ -106,34 +106,34 @@ export default function Page() {
   if (step === "form") return <FormPage form={form} upd={upd} onSubmit={startChat} />;
 
   return (
-    <div className="light" style={{ display: "flex", height: "100vh", background: "var(--bg)", overflow: "hidden" }}>
+    <div style={{ display: "flex", height: "100vh", background: "#FAFAFA", overflow: "hidden" }}>
 
       {/* ── 사이드바 ─────────────────────────────────────── */}
       <aside style={{
         width: sideCollapsed ? 52 : 260,
         minWidth: sideCollapsed ? 52 : 260,
-        background: "var(--surface)",
-        borderRight: "1px solid var(--border)",
+        background: "#FFFFFF",
+        borderRight: "1px solid #E2E2E8",
         display: "flex", flexDirection: "column",
         transition: "width 0.2s cubic-bezier(0.4,0,0.2,1), min-width 0.2s cubic-bezier(0.4,0,0.2,1)",
         overflow: "hidden",
       }}>
         {/* 사이드바 헤더 */}
-        <div style={{ padding: "14px 12px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", minHeight: 52 }}>
+        <div style={{ padding: "14px 12px", borderBottom: "1px solid #E2E2E8", display: "flex", alignItems: "center", justifyContent: "space-between", minHeight: 52 }}>
           {!sideCollapsed && (
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="4" fill="var(--text-primary)"/>
-                <circle cx="12" cy="12" r="7" stroke="var(--text-primary)" strokeWidth="1" strokeOpacity="0.35"/>
-                <circle cx="12" cy="12" r="10.5" stroke="var(--text-primary)" strokeWidth="0.5" strokeOpacity="0.2"/>
+                <circle cx="12" cy="12" r="4" fill="#111116"/>
+                <circle cx="12" cy="12" r="7" stroke="#111116" strokeWidth="1" strokeOpacity="0.35"/>
+                <circle cx="12" cy="12" r="10.5" stroke="#111116" strokeWidth="0.5" strokeOpacity="0.2"/>
               </svg>
-              <span style={{ fontFamily: "var(--font-body)", fontSize: 15, fontWeight: 600, letterSpacing: "-0.01em", color: "var(--text-primary)" }}>
+              <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 15, fontWeight: 600, letterSpacing: "-0.01em", color: "#111116" }}>
                 Aura
               </span>
             </div>
           )}
-          <button onClick={() => setSideCollapsed(!sideCollapsed)} style={{ background: "none", border: "none", cursor: "pointer", padding: 6, borderRadius: "var(--radius-md)", color: "var(--text-muted)", display: "flex", alignItems: "center", marginLeft: sideCollapsed ? "auto" : 0 }}
-            onMouseEnter={e => (e.currentTarget.style.background = "var(--surface-lt)")}
+          <button onClick={() => setSideCollapsed(!sideCollapsed)} style={{ background: "none", border: "none", cursor: "pointer", padding: 6, borderRadius: "6px", color: "#9898A4", display: "flex", alignItems: "center", marginLeft: sideCollapsed ? "auto" : 0 }}
+            onMouseEnter={e => (e.currentTarget.style.background = "#F7F7FA")}
             onMouseLeave={e => (e.currentTarget.style.background = "none")}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
           </button>
@@ -143,7 +143,7 @@ export default function Page() {
           <div style={{ flex: 1, overflowY: "auto", padding: "12px 0" }}>
 
             {/* 사주팔자 + 이름 */}
-            <SideSection label="사주팔자" right={form.name ? <span style={{ fontFamily: "var(--font-display)", fontSize: 11, fontWeight: 600, color: "var(--text-primary)" }}>{form.name}</span> : undefined}>
+            <SideSection label="사주팔자" right={form.name ? <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11, fontWeight: 600, color: "#111116" }}>{form.name}</span> : undefined}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4 }}>
                 {[
                   { l: "시주", h: "時", p: result.saju.hp },
@@ -151,22 +151,22 @@ export default function Page() {
                   { l: "월주", h: "月", p: result.saju.mp },
                   { l: "년주", h: "年", p: result.saju.yp },
                 ].map(({ l, h, p }) => (
-                  <div key={l} style={{ background: "var(--surface-lt)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "8px 4px", display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                    <span style={{ fontFamily: "var(--font-display)", fontSize: 8, letterSpacing: "0.1em", color: "var(--text-muted)" }}>{h}</span>
+                  <div key={l} style={{ background: "#F7F7FA", border: "1px solid #E2E2E8", borderRadius: "6px", padding: "8px 4px", display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                    <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 8, letterSpacing: "0.1em", color: "#9898A4" }}>{h}</span>
                     {p ? (
                       <>
-                        <span style={{ fontFamily: "var(--font-display)", fontSize: 18, lineHeight: 1.2, color: OH_HUM[CG_OH[p.cg]] }}>{CG[p.cg]}</span>
-                        <span style={{ fontFamily: "var(--font-display)", fontSize: 18, lineHeight: 1.2, color: OH_HUM[JJ_OH[p.jj]] }}>{JJ[p.jj]}</span>
-                        <span style={{ fontFamily: "var(--font-display)", fontSize: 8, color: "var(--text-muted)" }}>{CG_HJ[p.cg]}{JJ_HJ[p.jj]}</span>
+                        <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 18, lineHeight: 1.2, color: OH_HUM[CG_OH[p.cg]] }}>{CG[p.cg]}</span>
+                        <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 18, lineHeight: 1.2, color: OH_HUM[JJ_OH[p.jj]] }}>{JJ[p.jj]}</span>
+                        <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 8, color: "#9898A4" }}>{CG_HJ[p.cg]}{JJ_HJ[p.jj]}</span>
                       </>
                     ) : (
                       <>
-                        <span style={{ fontSize: 16, color: "var(--text-disabled)" }}>?</span>
-                        <span style={{ fontSize: 16, color: "var(--text-disabled)" }}>?</span>
-                        <span style={{ fontFamily: "var(--font-display)", fontSize: 8, color: "var(--text-disabled)" }}>미상</span>
+                        <span style={{ fontSize: 16, color: "#C8C8D0" }}>?</span>
+                        <span style={{ fontSize: 16, color: "#C8C8D0" }}>?</span>
+                        <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 8, color: "#C8C8D0" }}>미상</span>
                       </>
                     )}
-                    <span style={{ fontFamily: "var(--font-display)", fontSize: 8, color: "var(--text-lt)", marginTop: 2 }}>{l}</span>
+                    <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 8, color: "#6B6B78", marginTop: 2 }}>{l}</span>
                   </div>
                 ))}
               </div>
@@ -179,11 +179,11 @@ export default function Page() {
                 const mx = Math.max(...counts, 1);
                 return OH.map((n, i) => (
                   <div key={n} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                    <span style={{ fontFamily: "var(--font-display)", fontSize: 10, color: OH_HUM[i], width: 14, textAlign: "center" }}>{OH_HJ[i]}</span>
-                    <div style={{ flex: 1, height: 2, background: "var(--surface-md)", borderRadius: 1 }}>
+                    <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: OH_HUM[i], width: 14, textAlign: "center" }}>{OH_HJ[i]}</span>
+                    <div style={{ flex: 1, height: 2, background: "#EFEFF2", borderRadius: 1 }}>
                       <div style={{ width: `${(counts[i] / mx) * 100}%`, height: "100%", background: OH_HUM[i], borderRadius: 1, transition: "width .6s ease" }} />
                     </div>
-                    <span style={{ fontFamily: "var(--font-display)", fontSize: 10, color: "var(--text-muted)", width: 12, textAlign: "right" }}>{counts[i]}</span>
+                    <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: "#9898A4", width: 12, textAlign: "right" }}>{counts[i]}</span>
                   </div>
                 ));
               })()}
@@ -194,14 +194,14 @@ export default function Page() {
               {result.daeun.map((d: DaeunItem) => (
                 <div key={d.startAge} style={{
                   display: "flex", alignItems: "center", gap: 8, padding: "5px 8px",
-                  borderRadius: "var(--radius-md)", marginBottom: 2,
-                  background: d.isCurrent ? "var(--accent-dim)" : "transparent",
-                  border: d.isCurrent ? "1px solid var(--border-accent)" : "1px solid transparent",
+                  borderRadius: "6px", marginBottom: 2,
+                  background: d.isCurrent ? "rgba(46,46,56,0.06)" : "transparent",
+                  border: d.isCurrent ? "1px solid rgba(46,46,56,0.25)" : "1px solid transparent",
                 }}>
-                  <span style={{ fontFamily: "var(--font-display)", fontSize: 9, color: d.isCurrent ? "var(--text-accent)" : "var(--text-muted)", minWidth: 44, letterSpacing: "0.02em" }}>{d.startAge}–{d.endAge}세</span>
-                  <span style={{ fontFamily: "var(--font-display)", fontSize: 13, color: d.isCurrent ? "var(--text-accent)" : OH_HUM[CG_OH[d.cg]] }}>{CG[d.cg]}</span>
-                  <span style={{ fontFamily: "var(--font-display)", fontSize: 13, color: d.isCurrent ? "var(--text-accent)" : OH_HUM[JJ_OH[d.jj]] }}>{JJ[d.jj]}</span>
-                  {d.isCurrent && <span style={{ fontFamily: "var(--font-display)", fontSize: 8, color: "var(--text-accent)", marginLeft: "auto", letterSpacing: "0.1em" }}>NOW</span>}
+                  <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: d.isCurrent ? "#2E2E38" : "#9898A4", minWidth: 44, letterSpacing: "0.02em" }}>{d.startAge}–{d.endAge}세</span>
+                  <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 13, color: d.isCurrent ? "#2E2E38" : OH_HUM[CG_OH[d.cg]] }}>{CG[d.cg]}</span>
+                  <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 13, color: d.isCurrent ? "#2E2E38" : OH_HUM[JJ_OH[d.jj]] }}>{JJ[d.jj]}</span>
+                  {d.isCurrent && <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 8, color: "#2E2E38", marginLeft: "auto", letterSpacing: "0.1em" }}>NOW</span>}
                 </div>
               ))}
             </SideSection>
@@ -209,20 +209,20 @@ export default function Page() {
             {/* 세운 */}
             <SideSection label={`${new Date().getFullYear()} 세운`}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontFamily: "var(--font-display)", fontSize: 22, color: OH_HUM[CG_OH[result.seun.cg]] }}>{CG[result.seun.cg]}</span>
-                <span style={{ fontFamily: "var(--font-display)", fontSize: 22, color: OH_HUM[JJ_OH[result.seun.jj]] }}>{JJ[result.seun.jj]}</span>
-                <span style={{ fontFamily: "var(--font-display)", fontSize: 11, color: "var(--text-muted)" }}>{CG_HJ[result.seun.cg]}{JJ_HJ[result.seun.jj]}</span>
+                <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 22, color: OH_HUM[CG_OH[result.seun.cg]] }}>{CG[result.seun.cg]}</span>
+                <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 22, color: OH_HUM[JJ_OH[result.seun.jj]] }}>{JJ[result.seun.jj]}</span>
+                <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11, color: "#9898A4" }}>{CG_HJ[result.seun.cg]}{JJ_HJ[result.seun.jj]}</span>
               </div>
             </SideSection>
 
             {/* 궁합 */}
             <div style={{ padding: "0 12px", marginTop: 4 }}>
               <button onClick={() => setShowPartner(!showPartner)} style={{
-                width: "100%", padding: "8px 12px", background: showPartner ? "var(--accent-dim)" : "transparent",
-                border: "1px solid var(--border-dk)", borderRadius: "var(--radius-md)",
-                fontFamily: "var(--font-display)", fontSize: 10, fontWeight: 600,
+                width: "100%", padding: "8px 12px", background: showPartner ? "rgba(46,46,56,0.06)" : "transparent",
+                border: "1px solid #C8C8D0", borderRadius: "6px",
+                fontFamily: "'Geist Mono', monospace", fontSize: 10, fontWeight: 600,
                 letterSpacing: "0.12em", textTransform: "uppercase",
-                color: showPartner ? "var(--text-accent)" : "var(--text-lt)",
+                color: showPartner ? "#2E2E38" : "#6B6B78",
                 cursor: "pointer", display: "flex", alignItems: "center", gap: 8,
                 transition: "all 0.12s",
               }}>
@@ -232,28 +232,28 @@ export default function Page() {
 
             {showPartner && (
               <div style={{ padding: "12px 12px 0" }} className="fade-in">
-                <div style={{ background: "var(--surface-lt)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "14px 14px 12px" }}>
-                  <p style={{ fontFamily: "var(--font-display)", fontSize: 9, fontWeight: 500, letterSpacing: "0.20em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: 12 }}>상대방 정보</p>
+                <div style={{ background: "#F7F7FA", border: "1px solid #E2E2E8", borderRadius: "8px", padding: "14px 14px 12px" }}>
+                  <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.20em", textTransform: "uppercase", color: "#9898A4", marginBottom: 12 }}>상대방 정보</p>
                   {([["년", "year", "1988"], ["월", "month", "3"], ["일", "day", "15"]] as const).map(([l, k, ph]) => (
                     <div key={k} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                      <span style={{ fontFamily: "var(--font-display)", fontSize: 9, color: "var(--text-muted)", width: 14, letterSpacing: "0.1em" }}>{l.toUpperCase()}</span>
+                      <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: "#9898A4", width: 14, letterSpacing: "0.1em" }}>{l.toUpperCase()}</span>
                       <input style={{
-                        flex: 1, background: "var(--surface)", border: "1px solid var(--border-dk)",
-                        borderRadius: "var(--radius)", padding: "6px 10px",
-                        fontFamily: "var(--font-display)", fontSize: 12, color: "var(--text-primary)",
+                        flex: 1, background: "#FFFFFF", border: "1px solid #C8C8D0",
+                        borderRadius: "4px", padding: "6px 10px",
+                        fontFamily: "'Geist Mono', monospace", fontSize: 12, color: "#111116",
                         outline: "none", letterSpacing: "0.02em",
                       }} type="number" placeholder={ph} value={(partner as any)[k]}
                         onChange={e => updP(k, e.target.value)}
-                        onFocus={e => (e.currentTarget.style.borderColor = "var(--border-accent)")}
-                        onBlur={e => (e.currentTarget.style.borderColor = "var(--border-dk)")} />
+                        onFocus={e => (e.currentTarget.style.borderColor = "rgba(46,46,56,0.25)")}
+                        onBlur={e => (e.currentTarget.style.borderColor = "#C8C8D0")} />
                     </div>
                   ))}
                   <div style={{ marginBottom: 8 }}>
-                    <p style={{ fontFamily: "var(--font-display)", fontSize: 9, letterSpacing: "0.10em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: 6 }}>시</p>
+                    <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, letterSpacing: "0.10em", textTransform: "uppercase", color: "#9898A4", marginBottom: 6 }}>시</p>
                     <select style={{
-                      width: "100%", background: "var(--surface)", border: "1px solid var(--border-dk)",
-                      borderRadius: "var(--radius)", padding: "6px 10px",
-                      fontFamily: "var(--font-display)", fontSize: 11, color: "var(--text-primary)",
+                      width: "100%", background: "#FFFFFF", border: "1px solid #C8C8D0",
+                      borderRadius: "4px", padding: "6px 10px",
+                      fontFamily: "'Geist Mono', monospace", fontSize: 11, color: "#111116",
                       outline: "none", cursor: "pointer",
                     }} value={partner.hour} onChange={e => updP("hour", +e.target.value)}>
                       {HOURS.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
@@ -263,20 +263,20 @@ export default function Page() {
                     {([["F", "여성"], ["M", "남성"]] as const).map(([v, l]) => (
                       <button key={v} onClick={() => updP("gender", v)} style={{
                         flex: 1, padding: "6px 0",
-                        background: partner.gender === v ? "var(--accent-dim)" : "transparent",
-                        border: `1px solid ${partner.gender === v ? "var(--border-accent)" : "var(--border-dk)"}`,
-                        borderRadius: "var(--radius)", cursor: "pointer",
-                        fontFamily: "var(--font-display)", fontSize: 10, fontWeight: 600,
+                        background: partner.gender === v ? "rgba(46,46,56,0.06)" : "transparent",
+                        border: `1px solid ${partner.gender === v ? "rgba(46,46,56,0.25)" : "#C8C8D0"}`,
+                        borderRadius: "4px", cursor: "pointer",
+                        fontFamily: "'Geist Mono', monospace", fontSize: 10, fontWeight: 600,
                         letterSpacing: "0.08em", textTransform: "uppercase",
-                        color: partner.gender === v ? "var(--text-accent)" : "var(--text-lt)",
+                        color: partner.gender === v ? "#2E2E38" : "#6B6B78",
                       }}>{l}</button>
                     ))}
                   </div>
                   <button onClick={analyzePartner} style={{
                     width: "100%", padding: "9px", background: "linear-gradient(135deg, #F2F2F5, #C8C8D0, #9898A8)",
-                    border: "none", borderRadius: "var(--radius)", cursor: "pointer",
-                    fontFamily: "var(--font-display)", fontSize: 11, fontWeight: 600,
-                    letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--btn-primary-text)",
+                    border: "none", borderRadius: "4px", cursor: "pointer",
+                    fontFamily: "'Geist Mono', monospace", fontSize: 11, fontWeight: 600,
+                    letterSpacing: "0.08em", textTransform: "uppercase", color: "#FFFFFF",
                   }}>궁합 분석하기</button>
                 </div>
               </div>
@@ -286,10 +286,10 @@ export default function Page() {
               <SideSection label="상대 사주">
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 4 }}>
                   {[{ l: "일주", p: partnerSaju.dp }, { l: "월주", p: partnerSaju.mp }, { l: "년주", p: partnerSaju.yp }].map(({ l, p }) => (
-                    <div key={l} style={{ background: "var(--surface-lt)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "8px 4px", display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                      <span style={{ fontFamily: "var(--font-display)", fontSize: 16, color: OH_HUM[CG_OH[p.cg]] }}>{CG[p.cg]}</span>
-                      <span style={{ fontFamily: "var(--font-display)", fontSize: 16, color: OH_HUM[JJ_OH[p.jj]] }}>{JJ[p.jj]}</span>
-                      <span style={{ fontFamily: "var(--font-display)", fontSize: 8, color: "var(--text-muted)" }}>{l}</span>
+                    <div key={l} style={{ background: "#F7F7FA", border: "1px solid #E2E2E8", borderRadius: "6px", padding: "8px 4px", display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                      <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 16, color: OH_HUM[CG_OH[p.cg]] }}>{CG[p.cg]}</span>
+                      <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 16, color: OH_HUM[JJ_OH[p.jj]] }}>{JJ[p.jj]}</span>
+                      <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 8, color: "#9898A4" }}>{l}</span>
                     </div>
                   ))}
                 </div>
@@ -301,21 +301,21 @@ export default function Page() {
 
         {/* ── 사이드바 푸터 ── */}
         {!sideCollapsed && (
-          <div style={{ borderTop: "1px solid var(--border)", padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+          <div style={{ borderTop: "1px solid #E2E2E8", padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
             {/* 다시 입력 아이콘 */}
             <button title="다시 입력" onClick={() => { setStep("form"); setMessages([]); setResult(null); setPartnerSaju(null); }}
-              style={{ width: 32, height: 32, background: "transparent", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--text-muted)" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-lt)"; e.currentTarget.style.color = "var(--text-lt)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-muted)"; }}>
+              style={{ width: 32, height: 32, background: "transparent", border: "1px solid #E2E2E8", borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#9898A4" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "#F7F7FA"; e.currentTarget.style.color = "#6B6B78"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#9898A4"; }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4"/></svg>
             </button>
-            {/* spacer */}
+            {/* 유저 이메일 */}
             <span style={{ flex: 1 }} />
             {/* 세팅 아이콘 */}
             <button title="설정"
-              style={{ width: 32, height: 32, background: "transparent", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--text-muted)" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-lt)"; e.currentTarget.style.color = "var(--text-lt)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-muted)"; }}>
+              style={{ width: 32, height: 32, background: "transparent", border: "1px solid #E2E2E8", borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#9898A4" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "#F7F7FA"; e.currentTarget.style.color = "#6B6B78"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#9898A4"; }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             </button>
           </div>
@@ -323,17 +323,17 @@ export default function Page() {
       </aside>
 
       {/* ── 메인 채팅 ─────────────────────────────────────── */}
-      <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "var(--bg)" }}>
+      <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "#FAFAFA" }}>
 
         {/* 헤더 */}
-        <div style={{ padding: "0 24px", height: 52, borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
-          <span style={{ fontFamily: "var(--font-display)", fontSize: 10, fontWeight: 500, letterSpacing: "0.20em", textTransform: "uppercase", color: "var(--text-muted)" }}>
+        <div style={{ padding: "0 24px", height: 52, borderBottom: "1px solid #E2E2E8", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+          <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, fontWeight: 500, letterSpacing: "0.20em", textTransform: "uppercase", color: "#9898A4" }}>
             {form.year}년 {form.month}월 {form.day}일 · {form.gender === "F" ? "여성" : "남성"}
           </span>
           {result?.currentDaeun && (
             <>
-              <span style={{ color: "var(--border-dk)", fontSize: 10 }}>|</span>
-              <span style={{ fontFamily: "var(--font-display)", fontSize: 10, letterSpacing: "0.08em", color: "var(--text-accent-dk)" }}>
+              <span style={{ color: "#C8C8D0", fontSize: 10 }}>|</span>
+              <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, letterSpacing: "0.08em", color: "#9898A8" }}>
                 {CG[result.currentDaeun.cg]}{JJ[result.currentDaeun.jj]} 대운
               </span>
             </>
@@ -347,10 +347,10 @@ export default function Page() {
 
               <div style={{
                 maxWidth: "72%", padding: "12px 16px",
-                background: m.role === "user" ? "var(--surface-md)" : "var(--surface)",
-                border: `1px solid ${m.role === "user" ? "var(--border-dk)" : "var(--border)"}`,
-                borderRadius: m.role === "user" ? "var(--radius-lg) var(--radius-sm) var(--radius-lg) var(--radius-lg)" : "var(--radius-sm) var(--radius-lg) var(--radius-lg) var(--radius-lg)",
-                fontFamily: "var(--font-body)", fontSize: 14, lineHeight: 1.7,
+                background: m.role === "user" ? "#EFEFF2" : "#FFFFFF",
+                border: `1px solid ${m.role === "user" ? "#C8C8D0" : "#E2E2E8"}`,
+                borderRadius: m.role === "user" ? "8px 2px 8px 8px" : "2px 8px 8px 8px",
+                fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, lineHeight: 1.7,
               }}>
                 {renderContent(m.content, m.role === "user")}
               </div>
@@ -359,8 +359,8 @@ export default function Page() {
           {loading && (
             <div className="fade-in" style={{ display: "flex", marginBottom: 16 }}>
 
-              <div style={{ padding: "14px 16px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm) var(--radius-lg) var(--radius-lg) var(--radius-lg)", display: "flex", gap: 5, alignItems: "center" }}>
-                {[0, 1, 2].map(i => <span key={i} className="typing-dot" style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--text-muted)", display: "block", animationDelay: `${i * 0.2}s` }} />)}
+              <div style={{ padding: "14px 16px", background: "#FFFFFF", border: "1px solid #E2E2E8", borderRadius: "2px 8px 8px 8px", display: "flex", gap: 5, alignItems: "center" }}>
+                {[0, 1, 2].map(i => <span key={i} className="typing-dot" style={{ width: 5, height: 5, borderRadius: "50%", background: "#9898A4", display: "block", animationDelay: `${i * 0.2}s` }} />)}
               </div>
             </div>
           )}
@@ -372,13 +372,13 @@ export default function Page() {
             {["성격과 적성 분석해줘", "올해 운세는?", "현재 대운 해석해줘", "직업운 알려줘", "연애운이 궁금해", "재물운 분석해줘"].map(q => (
               <button key={q} onClick={() => setInput(q)} style={{
                 padding: "6px 14px", background: "transparent",
-                border: "1px solid var(--border-dk)", borderRadius: "var(--radius-full)",
-                fontFamily: "var(--font-display)", fontSize: 10, fontWeight: 500,
-                letterSpacing: "0.06em", color: "var(--text-lt)", cursor: "pointer",
+                border: "1px solid #C8C8D0", borderRadius: "9999px",
+                fontFamily: "'Geist Mono', monospace", fontSize: 10, fontWeight: 500,
+                letterSpacing: "0.06em", color: "#6B6B78", cursor: "pointer",
                 transition: "all 0.12s",
               }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--border-accent)"; e.currentTarget.style.color = "var(--text-md)"; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border-dk)"; e.currentTarget.style.color = "var(--text-lt)"; }}>
+                onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(46,46,56,0.25)"; e.currentTarget.style.color = "#3A3A44"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "#C8C8D0"; e.currentTarget.style.color = "#6B6B78"; }}>
                 {q}
               </button>
             ))}
@@ -387,26 +387,26 @@ export default function Page() {
 
         {/* 입력창 */}
         <div style={{ padding: "16px 28px 20px", flexShrink: 0 }}>
-          <div style={{ display: "flex", gap: 10, background: "var(--surface)", border: "1px solid var(--border-dk)", borderRadius: "var(--radius-lg)", padding: "10px 12px", transition: "border-color 0.15s" }}
+          <div style={{ display: "flex", gap: 10, background: "#FFFFFF", border: "1px solid #C8C8D0", borderRadius: "8px", padding: "10px 12px", transition: "border-color 0.15s" }}
             onFocus={() => { }} >
             <input style={{
               flex: 1, background: "transparent", border: "none", outline: "none",
-              fontFamily: "var(--font-body)", fontSize: 14, color: "var(--text-primary)",
+              fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, color: "#111116",
               lineHeight: 1.5,
             }} placeholder="무엇이 궁금하세요?"
               value={input} onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()} />
             <button onClick={() => send()} disabled={loading || !input.trim()} style={{
               width: 32, height: 32, flexShrink: 0,
-              background: loading || !input.trim() ? "var(--surface-md)" : "linear-gradient(135deg, #F2F2F5, #C8C8D0, #9898A8)",
-              border: "none", borderRadius: "var(--radius-md)",
+              background: loading || !input.trim() ? "#EFEFF2" : "linear-gradient(135deg, #F2F2F5, #C8C8D0, #9898A8)",
+              border: "none", borderRadius: "6px",
               display: "flex", alignItems: "center", justifyContent: "center",
               cursor: loading || !input.trim() ? "not-allowed" : "pointer",
               transition: "all 0.15s",
             }}>
               {loading
-                ? <div style={{ width: 12, height: 12, border: "2px solid var(--border-dk)", borderTopColor: "var(--text-accent)", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
-                : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={loading || !input.trim() ? "var(--text-muted)" : "var(--btn-primary-text)"} strokeWidth="2.5"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+                ? <div style={{ width: 12, height: 12, border: "2px solid #C8C8D0", borderTopColor: "#2E2E38", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+                : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={loading || !input.trim() ? "#9898A4" : "#FFFFFF"} strokeWidth="2.5"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
               }
             </button>
           </div>
@@ -421,7 +421,7 @@ function SideSection({ label, children, right }: { label: string; children: Reac
   return (
     <div style={{ padding: "0 12px", marginBottom: 4 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "12px 0 8px", paddingLeft: 2 }}>
-        <p style={{ fontFamily: "var(--font-display)", fontSize: 9, fontWeight: 500, letterSpacing: "0.20em", textTransform: "uppercase", color: "var(--text-muted)", margin: 0 }}>{label}</p>
+        <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.20em", textTransform: "uppercase", color: "#9898A4", margin: 0 }}>{label}</p>
         {right}
       </div>
       {children}
@@ -432,7 +432,7 @@ function SideSection({ label, children, right }: { label: string; children: Reac
 // ── 입력 폼 (라이트 테마) ────────────────────────────────────────────────────
 function FormPage({ form, upd, onSubmit }: { form: Form; upd: any; onSubmit: () => void }) {
   return (
-    <div className="light" style={{ minHeight: "100vh", background: "#FAFAFA", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 16px" }}>
+    <div style={{ minHeight: "100vh", background: "#FAFAFA", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 16px" }}>
       <div style={{ width: "100%", maxWidth: 440 }}>
 
         {/* 로고 */}
