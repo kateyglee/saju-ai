@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-const SYSTEM_PROMPT = `당신은 한국 전통 명리학(사주팔자) 전문 AI 상담사입니다.
+const SYSTEM_PROMPT = `당신은 Aura AI 운명 상담사. 한국 전통 명리학(사주팔자) 전문입니다.
 이름은 "명리 AI"입니다.
 
 [역할]
