@@ -78,18 +78,35 @@ export default function Page() {
       const cd = r.currentDaeun;
       const sy = new Date().getFullYear();
       const greeting = `안녕하세요, ${f.name || ""}님. ${f.year}년 ${f.month}월 ${f.day}일생 ${f.gender === "F" ? "여성" : "남성"}분의 사주를 불러왔습니다.\n\n일간(日干)은 **${CG[dp.cg]}${JJ[dp.jj]}(${CG_HJ[dp.cg]}${JJ_HJ[dp.jj]})**으로 이것이 당신의 핵심 기운입니다.\n\n현재 **${cd ? CG[cd.cg] + JJ[cd.jj] + " 대운" : "대운 산출 중"}** 흐름이며, **${sy}년 ${CG[r.seun.cg]}${JJ[r.seun.jj]} 세운**이 운세에 영향을 주고 있어요.\n\n무엇이든 물어보세요.`;
-      setMessages([{ role: "assistant", content: greeting }]);
       setStep("chat");
 
-      // Create a new chat session
-      s.from("chat_sessions").insert({
-        user_id: userId,
-        messages: [{ role: "assistant", content: greeting }],
-        saju_context: ctx,
-        created_at: new Date().toISOString(),
-      }).select("id").single().then(({ data }: any) => {
-        if (data) setSessionId(data.id);
-      });
+      // Try to load the most recent chat session, or create a new one
+      const { data: existingSession } = await s.from("chat_sessions")
+        .select("id, messages")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existingSession && existingSession.messages?.length > 0) {
+        console.log("[saju] loaded existing chat session:", existingSession.id);
+        setMessages(existingSession.messages);
+        setSessionId(existingSession.id);
+        if (existingSession.messages[0]?.role === "assistant") {
+          setSajuCtx(ctx);
+        }
+      } else {
+        console.log("[saju] creating new chat session");
+        setMessages([{ role: "assistant", content: greeting }]);
+        s.from("chat_sessions").insert({
+          user_id: userId,
+          messages: [{ role: "assistant", content: greeting }],
+          saju_context: ctx,
+          created_at: new Date().toISOString(),
+        }).select("id").single().then(({ data }: any) => {
+          if (data) setSessionId(data.id);
+        });
+      }
     } else {
       setStep("form");
     }
