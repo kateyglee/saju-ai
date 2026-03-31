@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 import { calcAll, calcSaju, sajuToPromptContext, HOURS, CG, CG_HJ, JJ, JJ_HJ, OH, OH_HJ, OH_C, CG_OH, JJ_OH, ohCounts } from "@/lib/saju";
 import type { SajuResult, DaeunItem, Saju } from "@/lib/saju";
 
@@ -50,13 +50,13 @@ export default function Page() {
   const [sideCollapsed, setSideCollapsed] = useState(false);
   const [sideSecondary, setSideSecondary] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
-
-  const supabase = createClient();
+  const [supabase, setSupabase] = useState<any>(null);
 
   // ── Load saved profile and jump to chat if exists ──
-  async function loadProfile(userId: string) {
-    if (!supabase) { setStep("form"); return; }
-    const { data: profile, error } = await supabase.from("profiles").select("*").eq("id", userId).single();
+  async function loadProfile(userId: string, sb?: any) {
+    const s = sb || supabase;
+    if (!s) { setStep("form"); return; }
+    const { data: profile, error } = await s.from("profiles").select("*").eq("id", userId).single();
     if (error || !profile) { setStep("form"); return; }
     if (profile && profile.birth_year && profile.birth_month && profile.birth_day) {
       const f: Form = {
@@ -79,7 +79,7 @@ export default function Page() {
       setStep("chat");
 
       // Create a new chat session
-      supabase.from("chat_sessions").insert({
+      s.from("chat_sessions").insert({
         user_id: userId,
         messages: [{ role: "assistant", content: greeting }],
         saju_context: ctx,
@@ -93,30 +93,38 @@ export default function Page() {
   }
 
   useEffect(() => {
-    if (!supabase) { setAuthLoading(false); setStep("form"); return; }
-    supabase.auth.getSession().then(async ({ data: { session } }: any) => {
-      const u = session?.user ?? null;
-      setUser(u);
-      if (u) {
-        try { await loadProfile(u.id); } catch { setStep("form"); }
-      } else {
+    let subscription: any = null;
+    getSupabase().then(async (sb: any) => {
+      if (!sb) { setAuthLoading(false); setStep("form"); return; }
+      setSupabase(sb);
+      try {
+        const { data: { session } } = await sb.auth.getSession();
+        const u = session?.user ?? null;
+        setUser(u);
+        if (u) {
+          try { await loadProfile(u.id, sb); } catch { setStep("form"); }
+        } else {
+          setStep("login");
+        }
+      } catch {
         setStep("login");
       }
       setAuthLoading(false);
+      const { data: { subscription: sub } } = sb.auth.onAuthStateChange(async (_event: any, session: any) => {
+        const u = session?.user ?? null;
+        setUser(u);
+        if (u && step === "login") {
+          try { await loadProfile(u.id, sb); } catch { setStep("form"); }
+        } else if (!u) {
+          setStep("login");
+        }
+      });
+      subscription = sub;
     }).catch(() => {
       setAuthLoading(false);
-      setStep("login");
+      setStep("form");
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: any, session: any) => {
-      const u = session?.user ?? null;
-      setUser(u);
-      if (u && step === "login") {
-        try { await loadProfile(u.id); } catch { setStep("form"); }
-      } else if (!u) {
-        setStep("login");
-      }
-    });
-    return () => subscription.unsubscribe();
+    return () => { if (subscription) subscription.unsubscribe(); };
   }, []);
 
   async function signInWithGoogle() {
