@@ -96,7 +96,7 @@ export default function Page() {
 
   useEffect(() => {
     let subscription: any = null;
-    console.log("[saju] initializing, calling getSupabase...");
+    console.log("[saju] v2 initializing, calling getSupabase...");
     getSupabase().then(async (sb: any) => {
       console.log("[saju] getSupabase returned:", sb ? "client" : "null");
       if (!sb) { setAuthLoading(false); setStep("form"); return; }
