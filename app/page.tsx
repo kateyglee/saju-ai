@@ -52,6 +52,7 @@ export default function Page() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [supabase, setSupabase] = useState<any>(null);
   const [chatHistory, setChatHistory] = useState<any[]>([]);
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
 
   // ── Load chat history list ──
   async function loadChatHistory(userId: string, sb: any) {
@@ -263,6 +264,21 @@ export default function Page() {
       if (newSession) {
         setSessionId(newSession.id);
         await loadChatHistory(user.id, supabase);
+      }
+    }
+  }
+
+  async function deleteSession(id: string) {
+    if (!supabase || !user) return;
+    await supabase.from("chat_sessions").delete().eq("id", id);
+    setMenuOpenId(null);
+    const updated = await loadChatHistory(user.id, supabase);
+    if (id === sessionId) {
+      if (updated.length > 0) {
+        setSessionId(updated[0].id);
+        setMessages(updated[0].messages || []);
+      } else {
+        await startNewChat();
       }
     }
   }
@@ -491,12 +507,19 @@ export default function Page() {
                           onBlur={e => (e.currentTarget.style.borderColor = "#C8C8D0")} />
                       </div>
                     ))}
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                      <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: "#9898A4", width: 14 }}>시</span>
+                      <select style={{ flex: 1, background: "#FFFFFF", border: "1px solid #C8C8D0", borderRadius: 4, padding: "6px 10px", fontFamily: "'Geist Mono', monospace", fontSize: 12, color: "#111116", outline: "none" }}
+                        value={partner.hour} onChange={e => updP("hour", +e.target.value)}>
+                        {HOURS.map((o: any) => <option key={o.v} value={o.v}>{o.l}</option>)}
+                      </select>
+                    </div>
                     <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
                       {([["F", "여성"], ["M", "남성"]] as const).map(([v, l]) => (
                         <button key={v} onClick={() => updP("gender", v)} style={{ flex: 1, padding: "6px 0", background: partner.gender === v ? "rgba(46,46,56,0.06)" : "transparent", border: `1px solid ${partner.gender === v ? "rgba(46,46,56,0.25)" : "#C8C8D0"}`, borderRadius: 4, cursor: "pointer", fontFamily: "'Geist Mono', monospace", fontSize: 10, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: partner.gender === v ? "#2E2E38" : "#6B6B78" }}>{l}</button>
                       ))}
                     </div>
-                    <button onClick={analyzePartner} style={{ width: "100%", padding: 9, background: "linear-gradient(135deg, #F2F2F5, #C8C8D0, #9898A8)", border: "none", borderRadius: 4, cursor: "pointer", fontFamily: "'Geist Mono', monospace", fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#FFFFFF" }}>궁합 분석하기</button>
+                    <button onClick={analyzePartner} style={{ width: "100%", padding: 9, background: "linear-gradient(135deg, #F2F2F5, #C8C8D0, #9898A8)", border: "none", borderRadius: 4, cursor: "pointer", fontFamily: "'Geist Mono', monospace", fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#FFFFFF" }}>사주 정보 추가</button>
                   </div>
                 </div>
               )}
@@ -518,22 +541,40 @@ export default function Page() {
                   const preview = firstUserMsg?.content?.slice(0, 30) || "새 대화";
                   const isActive = session.id === sessionId;
                   return (
-                    <button key={session.id} onClick={() => {
-                      setSessionId(session.id);
-                      setMessages(session.messages || []);
-                    }} style={{
-                      width: "100%", display: "flex", alignItems: "center", height: 32, padding: "0 10px",
-                      borderRadius: 6, cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif",
-                      fontSize: 13, color: isActive ? "#111116" : "#3A3A44",
-                      background: isActive ? "#EFEFF2" : "transparent", border: "none",
-                      gap: 8, transition: "background 0.12s", textAlign: "left",
-                      overflow: "hidden", whiteSpace: "nowrap" as const, textOverflow: "ellipsis",
-                    }}
-                      onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "#F7F7FA"; }}
-                      onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9898A4" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                      <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{preview}{firstUserMsg ? "" : " ✨"}</span>
-                    </button>
+                    <div key={session.id} style={{ position: "relative" }}
+                      onMouseEnter={e => { const btn = e.currentTarget.querySelector("[data-dots]") as HTMLElement; if (btn) btn.style.opacity = "1"; }}
+                      onMouseLeave={e => { const btn = e.currentTarget.querySelector("[data-dots]") as HTMLElement; if (btn && menuOpenId !== session.id) btn.style.opacity = "0"; }}>
+                      <button onClick={() => { setSessionId(session.id); setMessages(session.messages || []); setMenuOpenId(null); }} style={{
+                        width: "100%", display: "flex", alignItems: "center", height: 32, padding: "0 10px",
+                        borderRadius: 6, cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif",
+                        fontSize: 13, color: isActive ? "#111116" : "#3A3A44",
+                        background: isActive ? "#EFEFF2" : "transparent", border: "none",
+                        gap: 8, transition: "background 0.12s", textAlign: "left",
+                      }}
+                        onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "#F7F7FA"; }}
+                        onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9898A4" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{preview}{firstUserMsg ? "" : " ✨"}</span>
+                      </button>
+                      {/* 3-dot menu */}
+                      <button data-dots onClick={e => { e.stopPropagation(); setMenuOpenId(menuOpenId === session.id ? null : session.id); }}
+                        style={{ position: "absolute", right: 6, top: 6, width: 20, height: 20, background: "none", border: "none", cursor: "pointer", borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center", opacity: menuOpenId === session.id ? 1 : 0, transition: "opacity 0.12s", color: "#9898A4" }}
+                        onMouseEnter={e => (e.currentTarget.style.background = "#EFEFF2")}
+                        onMouseLeave={e => (e.currentTarget.style.background = "none")}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+                      </button>
+                      {menuOpenId === session.id && (
+                        <div style={{ position: "absolute", right: 4, top: 28, background: "#fff", border: "1px solid #E2E2E8", borderRadius: 6, boxShadow: "0 4px 12px rgba(0,0,0,0.1)", zIndex: 50, overflow: "hidden", animation: "fadeIn 0.12s ease" }}>
+                          <button onClick={e => { e.stopPropagation(); deleteSession(session.id); }}
+                            style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "none", border: "none", cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: "#E04040", whiteSpace: "nowrap" }}
+                            onMouseEnter={e => (e.currentTarget.style.background = "#FFF5F5")}
+                            onMouseLeave={e => (e.currentTarget.style.background = "none")}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4h8v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+                            삭제
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   );
                 })
               )}
@@ -552,6 +593,11 @@ export default function Page() {
                   style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer", borderRadius: 6, color: "#9898A4" }}
                   onMouseEnter={e => (e.currentTarget.style.background = "#EFEFF2")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4"/></svg>
+                </button>
+                <button title="사람들" onClick={() => window.location.href = "/people"}
+                  style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer", borderRadius: 6, color: "#9898A4" }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "#EFEFF2")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 </button>
                 <button title="설정" style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer", borderRadius: 6, color: "#9898A4" }}
                   onMouseEnter={e => (e.currentTarget.style.background = "#EFEFF2")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
