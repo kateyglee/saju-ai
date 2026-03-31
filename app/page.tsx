@@ -48,10 +48,12 @@ export default function Page() {
   const [partner, setPartner]     = useState<PartnerForm>({ year: "", month: "", day: "", hour: -1, gender: "M" });
   const [partnerSaju, setPartnerSaju] = useState<Saju | null>(null);
   const [sideCollapsed, setSideCollapsed] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
   const supabase = createClient();
 
   useEffect(() => {
+    if (!supabase) { setAuthLoading(false); return; }
     supabase.auth.getSession().then(({ data: { session } }: any) => {
       setUser(session?.user ?? null);
       setAuthLoading(false);
@@ -63,6 +65,7 @@ export default function Page() {
   }, []);
 
   async function signInWithGoogle() {
+    if (!supabase) return;
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/auth/callback` },
@@ -70,7 +73,7 @@ export default function Page() {
   }
 
   async function signOut() {
-    await supabase.auth.signOut();
+    if (supabase) await supabase.auth.signOut();
     setStep("form"); setResult(null); setMessages([]);
     setUser(null);
   }
@@ -94,11 +97,32 @@ export default function Page() {
     const dp = r.saju.dp;
     const cd = r.currentDaeun;
     const sy = new Date().getFullYear();
-    setMessages([{
-      role: "assistant",
-      content: `안녕하세요. ${form.year}년 ${form.month}월 ${form.day}일생 ${form.gender === "F" ? "여성" : "남성"}분의 사주를 분석했습니다.\n\n일간(日干)은 **${CG[dp.cg]}${JJ[dp.jj]}(${CG_HJ[dp.cg]}${JJ_HJ[dp.jj]})**으로 이것이 당신의 핵심 기운입니다.\n\n현재 **${cd ? CG[cd.cg] + JJ[cd.jj] + " 대운" : "대운 산출 중"}** 흐름이며, **${sy}년 ${CG[r.seun.cg]}${JJ[r.seun.jj]} 세운**이 운세에 영향을 주고 있어요.\n\n무엇이든 물어보세요.`
-    }]);
+    const greeting = `안녕하세요. ${form.year}년 ${form.month}월 ${form.day}일생 ${form.gender === "F" ? "여성" : "남성"}분의 사주를 분석했습니다.\n\n일간(日干)은 **${CG[dp.cg]}${JJ[dp.jj]}(${CG_HJ[dp.cg]}${JJ_HJ[dp.jj]})**으로 이것이 당신의 핵심 기운입니다.\n\n현재 **${cd ? CG[cd.cg] + JJ[cd.jj] + " 대운" : "대운 산출 중"}** 흐름이며, **${sy}년 ${CG[r.seun.cg]}${JJ[r.seun.jj]} 세운**이 운세에 영향을 주고 있어요.\n\n무엇이든 물어보세요.`;
+    setMessages([{ role: "assistant", content: greeting }]);
     setStep("chat");
+
+    // ── Save profile & create chat session in Supabase ──
+    if (user && supabase) {
+      supabase.from("profiles").upsert({
+        id: user.id,
+        name: form.name,
+        birth_year: +form.year,
+        birth_month: +form.month,
+        birth_day: +form.day,
+        birth_hour: +form.hour,
+        gender: form.gender,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "id" }).then(() => {});
+
+      supabase.from("chat_sessions").insert({
+        user_id: user.id,
+        messages: [{ role: "assistant", content: greeting }],
+        saju_context: ctx,
+        created_at: new Date().toISOString(),
+      }).select("id").single().then(({ data }: any) => {
+        if (data) setSessionId(data.id);
+      });
+    }
   }
 
   function analyzePartner() {
@@ -134,6 +158,14 @@ export default function Page() {
         if (done) break;
         aiText += decoder.decode(value, { stream: true });
         setMessages(prev => { const u = [...prev]; u[u.length - 1] = { role: "assistant", content: aiText }; return u; });
+      }
+      // ── Save updated messages to Supabase chat_sessions ──
+      if (sessionId && user && supabase) {
+        const finalMessages = [...newMsgs, { role: "assistant" as const, content: aiText }];
+        supabase.from("chat_sessions").update({
+          messages: finalMessages,
+          updated_at: new Date().toISOString(),
+        }).eq("id", sessionId).then(() => {});
       }
     } catch {
       setMessages(prev => [...prev, { role: "assistant", content: "오류가 발생했습니다. 다시 시도해주세요." }]);
