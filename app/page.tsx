@@ -96,39 +96,56 @@ export default function Page() {
 
   useEffect(() => {
     let subscription: any = null;
-    console.log("[saju] v2 initializing, calling getSupabase...");
-    getSupabase().then(async (sb: any) => {
-      console.log("[saju] getSupabase returned:", sb ? "client" : "null");
+    (async () => {
+      let sb: any = null;
+      try {
+        sb = await getSupabase();
+        console.log("[saju] getSupabase:", sb ? "ok" : "null");
+      } catch (e) {
+        console.log("[saju] getSupabase error:", e);
+      }
       if (!sb) { setAuthLoading(false); setStep("form"); return; }
       setSupabase(sb);
+
+      let u: any = null;
       try {
-        const { data: { session } } = await sb.auth.getSession();
-        const u = session?.user ?? null;
-        console.log("[saju] session user:", u ? u.email : "none");
-        setUser(u);
-        if (u) {
-          try { await loadProfile(u.id, sb); } catch { setStep("form"); }
-        } else {
-          setStep("login");
+        const { data } = await sb.auth.getSession();
+        u = data?.session?.user ?? null;
+        console.log("[saju] session:", u ? u.email : "no session");
+      } catch (e) {
+        console.log("[saju] getSession error:", e);
+      }
+      setUser(u);
+
+      if (u) {
+        try {
+          await loadProfile(u.id, sb);
+          console.log("[saju] loadProfile done, step will be chat or form");
+        } catch (e) {
+          console.log("[saju] loadProfile error:", e);
+          setStep("form");
         }
-      } catch {
+      } else {
+        console.log("[saju] no user, showing login");
         setStep("login");
       }
       setAuthLoading(false);
-      const { data: { subscription: sub } } = sb.auth.onAuthStateChange(async (_event: any, session: any) => {
-        const u = session?.user ?? null;
-        setUser(u);
-        if (u) {
-          try { await loadProfile(u.id, sb); } catch { setStep("form"); }
-        } else {
-          setStep("login");
-        }
-      });
-      subscription = sub;
-    }).catch(() => {
-      setAuthLoading(false);
-      setStep("form");
-    });
+
+      try {
+        const { data: { subscription: sub } } = sb.auth.onAuthStateChange(async (_event: any, session: any) => {
+          const authUser = session?.user ?? null;
+          setUser(authUser);
+          if (authUser) {
+            try { await loadProfile(authUser.id, sb); } catch { setStep("form"); }
+          } else {
+            setStep("login");
+          }
+        });
+        subscription = sub;
+      } catch (e) {
+        console.log("[saju] onAuthStateChange error:", e);
+      }
+    })();
     return () => { if (subscription) subscription.unsubscribe(); };
   }, []);
 
