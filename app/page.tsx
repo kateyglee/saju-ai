@@ -55,10 +55,12 @@ export default function Page() {
   // ── Load saved profile and jump to chat if exists ──
   async function loadProfile(userId: string, sb?: any) {
     const s = sb || supabase;
-    if (!s) { setStep("form"); return; }
+    if (!s) { console.log("[saju] loadProfile: no supabase client"); setStep("form"); return; }
+    console.log("[saju] loadProfile: querying profiles for", userId);
     const { data: profile, error } = await s.from("profiles").select("*").eq("id", userId).single();
+    console.log("[saju] loadProfile result:", { profile, error: error?.message });
     if (error || !profile) { setStep("form"); return; }
-    if (profile && profile.birth_year && profile.birth_month && profile.birth_day) {
+    if (profile.birth_year && profile.birth_month && profile.birth_day) {
       const f: Form = {
         name: profile.name || "",
         year: String(profile.birth_year),
@@ -113,9 +115,9 @@ export default function Page() {
       const { data: { subscription: sub } } = sb.auth.onAuthStateChange(async (_event: any, session: any) => {
         const u = session?.user ?? null;
         setUser(u);
-        if (u && step === "login") {
+        if (u) {
           try { await loadProfile(u.id, sb); } catch { setStep("form"); }
-        } else if (!u) {
+        } else {
           setStep("login");
         }
       });
@@ -137,7 +139,7 @@ export default function Page() {
 
   async function signOut() {
     if (supabase) await supabase.auth.signOut();
-    setStep("form"); setResult(null); setMessages([]);
+    setStep("login"); setResult(null); setMessages([]);
     setUser(null);
   }
 
