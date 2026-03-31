@@ -51,6 +51,18 @@ export default function Page() {
   const [sideSecondary, setSideSecondary] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [supabase, setSupabase] = useState<any>(null);
+  const [chatHistory, setChatHistory] = useState<any[]>([]);
+
+  // ── Load chat history list ──
+  async function loadChatHistory(userId: string, sb: any) {
+    const { data } = await sb.from("chat_sessions")
+      .select("id, messages, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    if (data) setChatHistory(data);
+    return data || [];
+  }
 
   // ── Load saved profile and jump to chat if exists ──
   async function loadProfile(userId: string, sb?: any) {
@@ -88,24 +100,26 @@ export default function Page() {
         .limit(1)
         .maybeSingle();
 
-      if (existingSession && existingSession.messages?.length > 0) {
-        console.log("[saju] loaded existing chat session:", existingSession.id);
-        setMessages(existingSession.messages);
-        setSessionId(existingSession.id);
-        if (existingSession.messages[0]?.role === "assistant") {
-          setSajuCtx(ctx);
-        }
+      // Load chat history list
+      const history = await loadChatHistory(userId, s);
+
+      if (history.length > 0 && history[0].messages?.length > 0) {
+        console.log("[saju] loaded existing chat session:", history[0].id);
+        setMessages(history[0].messages);
+        setSessionId(history[0].id);
       } else {
         console.log("[saju] creating new chat session");
         setMessages([{ role: "assistant", content: greeting }]);
-        s.from("chat_sessions").insert({
+        const { data: newSession }: any = await s.from("chat_sessions").insert({
           user_id: userId,
           messages: [{ role: "assistant", content: greeting }],
           saju_context: ctx,
           created_at: new Date().toISOString(),
-        }).select("id").single().then(({ data }: any) => {
-          if (data) setSessionId(data.id);
-        });
+        }).select("id").single();
+        if (newSession) {
+          setSessionId(newSession.id);
+          setChatHistory([{ id: newSession.id, messages: [{ role: "assistant", content: greeting }], created_at: new Date().toISOString() }]);
+        }
       }
     } else {
       setStep("form");
@@ -236,6 +250,23 @@ export default function Page() {
     setInput(`${partner.year}년 ${partner.month}월 ${partner.day}일생 ${partner.gender === "F" ? "여성" : "남성"}(${CG[pDp.cg]}${JJ[pDp.jj]} 일간)과의 궁합을 분석해주세요.`);
   }
 
+  async function startNewChat() {
+    if (!result || !sajuCtx) return;
+    const dp = result.saju.dp;
+    const greeting = `안녕하세요, ${form.name || ""}님. 새로운 대화를 시작합니다.\n\n일간(日干)은 **${CG[dp.cg]}${JJ[dp.jj]}(${CG_HJ[dp.cg]}${JJ_HJ[dp.jj]})**입니다.\n\n무엇이든 물어보세요.`;
+    const newMsgs: Message[] = [{ role: "assistant", content: greeting }];
+    setMessages(newMsgs);
+    if (supabase && user) {
+      const { data: newSession }: any = await supabase.from("chat_sessions").insert({
+        user_id: user.id, messages: newMsgs, saju_context: sajuCtx, created_at: new Date().toISOString(),
+      }).select("id").single();
+      if (newSession) {
+        setSessionId(newSession.id);
+        await loadChatHistory(user.id, supabase);
+      }
+    }
+  }
+
   async function send(override?: string) {
     const txt = override ?? input;
     if (!txt.trim() || loading) return;
@@ -262,10 +293,12 @@ export default function Page() {
       // ── Save updated messages to Supabase chat_sessions ──
       if (sessionId && user && supabase) {
         const finalMessages = [...newMsgs, { role: "assistant" as const, content: aiText }];
-        supabase.from("chat_sessions").update({
+        await supabase.from("chat_sessions").update({
           messages: finalMessages,
           updated_at: new Date().toISOString(),
-        }).eq("id", sessionId).then(() => {});
+        }).eq("id", sessionId);
+        // Refresh sidebar history
+        loadChatHistory(user.id, supabase);
       }
     } catch {
       setMessages(prev => [...prev, { role: "assistant", content: "오류가 발생했습니다. 다시 시도해주세요." }]);
@@ -388,7 +421,7 @@ export default function Page() {
 
             {/* 새 채팅 + 검색 */}
             <div style={{ padding: "6px 10px", flexShrink: 0, display: "flex", flexDirection: "column", gap: 1 }}>
-              {[{ icon: "M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z", label: "새 채팅", action: () => { setMessages([]); } },
+              {[{ icon: "M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z", label: "새 채팅", action: () => startNewChat() },
                 { icon: "M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z", label: "검색", action: () => {} }
               ].map(item => (
                 <button key={item.label} onClick={item.action} style={{ width: "100%", display: "flex", alignItems: "center", height: 32, padding: "0 10px", borderRadius: 6, cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, fontWeight: 400, color: "#3A3A44", background: "transparent", border: "none", gap: 10, transition: "background 0.12s" }}
@@ -475,9 +508,35 @@ export default function Page() {
             {/* 채팅 히스토리 */}
             <div style={{ flex: 1, overflowY: "auto", padding: "8px 10px 0" }}>
               <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, fontWeight: 500, letterSpacing: "0.20em", textTransform: "uppercase", color: "#9898A4", padding: "4px 10px 6px", margin: 0 }}>최근 채팅</p>
-              <div style={{ display: "flex", alignItems: "center", height: 32, padding: "0 10px", borderRadius: 6, color: "#9898A4" }}>
-                <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: "#9898A4" }}>채팅 기록이 여기에 표시됩니다</span>
-              </div>
+              {chatHistory.length === 0 ? (
+                <div style={{ display: "flex", alignItems: "center", height: 32, padding: "0 10px", borderRadius: 6, color: "#9898A4" }}>
+                  <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: "#9898A4" }}>채팅 기록이 여기에 표시됩니다</span>
+                </div>
+              ) : (
+                chatHistory.map((session: any) => {
+                  const firstUserMsg = session.messages?.find((m: any) => m.role === "user");
+                  const preview = firstUserMsg?.content?.slice(0, 30) || "새 대화";
+                  const isActive = session.id === sessionId;
+                  return (
+                    <button key={session.id} onClick={() => {
+                      setSessionId(session.id);
+                      setMessages(session.messages || []);
+                    }} style={{
+                      width: "100%", display: "flex", alignItems: "center", height: 32, padding: "0 10px",
+                      borderRadius: 6, cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif",
+                      fontSize: 13, color: isActive ? "#111116" : "#3A3A44",
+                      background: isActive ? "#EFEFF2" : "transparent", border: "none",
+                      gap: 8, transition: "background 0.12s", textAlign: "left",
+                      overflow: "hidden", whiteSpace: "nowrap" as const, textOverflow: "ellipsis",
+                    }}
+                      onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "#F7F7FA"; }}
+                      onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9898A4" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{preview}{firstUserMsg ? "" : " ✨"}</span>
+                    </button>
+                  );
+                })
+              )}
             </div>
 
             {/* 풋터 */}
