@@ -61,18 +61,18 @@ export default function Page() {
     console.log("[saju] loadProfile result:", { profile, error: error?.message });
     if (error) { console.log("[saju] profile query error, showing form"); setStep("form"); return; }
     if (!profile) { console.log("[saju] no profile found, showing form"); setStep("form"); return; }
-    if (profile.birth_year && profile.birth_month && profile.birth_day) {
+    if (profile.year && profile.month && profile.day) {
       const f: Form = {
         name: profile.name || "",
-        year: String(profile.birth_year),
-        month: String(profile.birth_month),
-        day: String(profile.birth_day),
-        hour: profile.birth_hour ?? 11,
+        year: String(profile.year),
+        month: String(profile.month),
+        day: String(profile.day),
+        hour: profile.hour ?? 11,
         gender: profile.gender || "F",
       };
       setForm(f);
-      const r = calcAll(profile.birth_year, profile.birth_month, profile.birth_day, profile.birth_hour ?? 11, f.gender);
-      const ctx = sajuToPromptContext(r, f.gender, profile.birth_year, profile.birth_month, profile.birth_day);
+      const r = calcAll(profile.year, profile.month, profile.day, profile.hour ?? 11, f.gender);
+      const ctx = sajuToPromptContext(r, f.gender, profile.year, profile.month, profile.day);
       setResult(r); setSajuCtx(ctx);
       const dp = r.saju.dp;
       const cd = r.currentDaeun;
@@ -186,13 +186,16 @@ export default function Page() {
       supabase.from("profiles").upsert({
         id: user.id,
         name: form.name,
-        birth_year: +form.year,
-        birth_month: +form.month,
-        birth_day: +form.day,
-        birth_hour: +form.hour,
+        year: +form.year,
+        month: +form.month,
+        day: +form.day,
+        hour: +form.hour,
         gender: form.gender,
         updated_at: new Date().toISOString(),
-      }, { onConflict: "id" }).then(() => {});
+      }, { onConflict: "id" }).then(({ error: e }: any) => {
+        if (e) console.log("[saju] profile save error:", e.message);
+        else console.log("[saju] profile saved");
+      });
 
       supabase.from("chat_sessions").insert({
         user_id: user.id,
