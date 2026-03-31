@@ -48,6 +48,7 @@ export default function Page() {
   const [partner, setPartner]     = useState<PartnerForm>({ year: "", month: "", day: "", hour: -1, gender: "M" });
   const [partnerSaju, setPartnerSaju] = useState<Saju | null>(null);
   const [sideCollapsed, setSideCollapsed] = useState(false);
+  const [sideSecondary, setSideSecondary] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
 
   const supabase = createClient();
@@ -81,13 +82,6 @@ export default function Page() {
   const upd  = (k: keyof Form, v: string | number) => setForm(p => ({ ...p, [k]: v }));
   const updP = (k: keyof PartnerForm, v: string | number) => setPartner(p => ({ ...p, [k]: v }));
 
-  if (authLoading) return (
-    <div style={{ minHeight: "100vh", background: "#FAFAFA", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ width: 20, height: 20, border: "2px solid #E2E2E8", borderTopColor: "#2E2E38", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
-    </div>
-  );
-
-  if (!user) return <LoginPage onGoogleLogin={signInWithGoogle} />;
 
   function startChat() {
     if (!form.year || !form.month || !form.day) return;
@@ -186,7 +180,74 @@ export default function Page() {
         display: "flex", flexDirection: "column",
         transition: "width 0.2s cubic-bezier(0.4,0,0.2,1), min-width 0.2s cubic-bezier(0.4,0,0.2,1)",
         overflow: "hidden",
+        position: "relative",
       }}>
+
+        {/* ── 세컨더리 패널 (오행/대운/세운) ── */}
+        {!sideCollapsed && sideSecondary && result && (
+          <div style={{ position: "absolute", inset: 0, background: "#FFFFFF", zIndex: 10, display: "flex", flexDirection: "column", animation: "slideIn 0.18s ease" }}>
+            <div style={{ height: 52, padding: "0 14px", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid #E2E2E8", flexShrink: 0 }}>
+              <button onClick={() => setSideSecondary(false)} style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer", borderRadius: 6, color: "#6B6B78" }}
+                onMouseEnter={e => (e.currentTarget.style.background = "#EFEFF2")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#2E2E38", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 600, color: "#fff" }}>{form.name ? form.name.slice(0,1) : "나"}</span>
+                </div>
+                <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, fontWeight: 500, color: "#111116" }}>{form.name || "내 사주"}</span>
+              </div>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "12px 0" }}>
+              <SideSection label="사주팔자">
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 3 }}>
+                  {[{ l: "시주", p: result.saju.hp }, { l: "일주", p: result.saju.dp }, { l: "월주", p: result.saju.mp }, { l: "년주", p: result.saju.yp }].map(({ l, p }) => (
+                    <div key={l} style={{ background: "#F7F7FA", border: "1px solid #E2E2E8", borderRadius: 5, padding: "7px 2px", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                      {p ? (<>
+                        <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 16, lineHeight: 1.2, color: OH_HUM[CG_OH[p.cg]] }}>{CG[p.cg]}</span>
+                        <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 16, lineHeight: 1.2, color: OH_HUM[JJ_OH[p.jj]] }}>{JJ[p.jj]}</span>
+                        <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 7, color: "#9898A4" }}>{CG_HJ[p.cg]}{JJ_HJ[p.jj]}</span>
+                      </>) : (<><span style={{ fontSize: 14, color: "#C8C8D0" }}>?</span><span style={{ fontSize: 14, color: "#C8C8D0" }}>?</span></>)}
+                      <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 7, color: "#6B6B78", marginTop: 1 }}>{l}</span>
+                    </div>
+                  ))}
+                </div>
+              </SideSection>
+              <SideSection label="오행 분포">
+                {(() => {
+                  const counts = ohCounts(result.saju);
+                  const mx = Math.max(...counts, 1);
+                  return OH.map((n, i) => (
+                    <div key={n} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                      <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: OH_HUM[i], width: 14, textAlign: "center" }}>{OH_HJ[i]}</span>
+                      <div style={{ flex: 1, height: 2, background: "#EFEFF2", borderRadius: 1 }}>
+                        <div style={{ width: `${(counts[i] / mx) * 100}%`, height: "100%", background: OH_HUM[i], borderRadius: 1 }} />
+                      </div>
+                      <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: "#9898A4", width: 12, textAlign: "right" }}>{counts[i]}</span>
+                    </div>
+                  ));
+                })()}
+              </SideSection>
+              <SideSection label="대운 흐름">
+                {result.daeun.map((d: DaeunItem) => (
+                  <div key={d.startAge} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 8px", borderRadius: 6, marginBottom: 2, background: d.isCurrent ? "rgba(46,46,56,0.06)" : "transparent", border: d.isCurrent ? "1px solid rgba(46,46,56,0.25)" : "1px solid transparent" }}>
+                    <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: d.isCurrent ? "#2E2E38" : "#9898A4", minWidth: 44 }}>{d.startAge}–{d.endAge}세</span>
+                    <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 13, color: d.isCurrent ? "#2E2E38" : OH_HUM[CG_OH[d.cg]] }}>{CG[d.cg]}</span>
+                    <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 13, color: d.isCurrent ? "#2E2E38" : OH_HUM[JJ_OH[d.jj]] }}>{JJ[d.jj]}</span>
+                    {d.isCurrent && <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 8, color: "#2E2E38", marginLeft: "auto" }}>NOW</span>}
+                  </div>
+                ))}
+              </SideSection>
+              <SideSection label={`${new Date().getFullYear()} 세운`}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: "#F7F7FA", border: "1px solid #E2E2E8", borderRadius: 6 }}>
+                  <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 22, color: OH_HUM[CG_OH[result.seun.cg]] }}>{CG[result.seun.cg]}</span>
+                  <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 22, color: OH_HUM[JJ_OH[result.seun.jj]] }}>{JJ[result.seun.jj]}</span>
+                  <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11, color: "#9898A4" }}>{CG_HJ[result.seun.cg]}{JJ_HJ[result.seun.jj]}</span>
+                </div>
+              </SideSection>
+            </div>
+          </div>
+        )}
         {/* 사이드바 헤더 */}
         <div style={{ padding: "14px 12px", borderBottom: "1px solid #E2E2E8", display: "flex", alignItems: "center", justifyContent: "space-between", minHeight: 52 }}>
           {!sideCollapsed && (
@@ -208,185 +269,124 @@ export default function Page() {
           </button>
         </div>
 
-        {!sideCollapsed && result && (
-          <div style={{ flex: 1, overflowY: "auto", padding: "12px 0" }}>
+        {/* ── 메인 사이드바 본문 ── */}
+        {!sideCollapsed && (
+          <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
 
-            {/* 사주팔자 + 이름 */}
-            <SideSection label="사주팔자" right={form.name ? <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11, fontWeight: 600, color: "#111116" }}>{form.name}</span> : undefined}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4 }}>
-                {[
-                  { l: "시주", h: "時", p: result.saju.hp },
-                  { l: "일주", h: "日", p: result.saju.dp },
-                  { l: "월주", h: "月", p: result.saju.mp },
-                  { l: "년주", h: "年", p: result.saju.yp },
-                ].map(({ l, h, p }) => (
-                  <div key={l} style={{ background: "#F7F7FA", border: "1px solid #E2E2E8", borderRadius: "6px", padding: "8px 4px", display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                    <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 8, letterSpacing: "0.1em", color: "#9898A4" }}>{h}</span>
-                    {p ? (
-                      <>
-                        <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 18, lineHeight: 1.2, color: OH_HUM[CG_OH[p.cg]] }}>{CG[p.cg]}</span>
-                        <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 18, lineHeight: 1.2, color: OH_HUM[JJ_OH[p.jj]] }}>{JJ[p.jj]}</span>
-                        <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 8, color: "#9898A4" }}>{CG_HJ[p.cg]}{JJ_HJ[p.jj]}</span>
-                      </>
-                    ) : (
-                      <>
-                        <span style={{ fontSize: 16, color: "#C8C8D0" }}>?</span>
-                        <span style={{ fontSize: 16, color: "#C8C8D0" }}>?</span>
-                        <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 8, color: "#C8C8D0" }}>미상</span>
-                      </>
-                    )}
-                    <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 8, color: "#6B6B78", marginTop: 2 }}>{l}</span>
-                  </div>
-                ))}
-              </div>
-            </SideSection>
-
-            {/* 오행 분포 */}
-            <SideSection label="오행 분포">
-              {(() => {
-                const counts = ohCounts(result.saju);
-                const mx = Math.max(...counts, 1);
-                return OH.map((n, i) => (
-                  <div key={n} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                    <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: OH_HUM[i], width: 14, textAlign: "center" }}>{OH_HJ[i]}</span>
-                    <div style={{ flex: 1, height: 2, background: "#EFEFF2", borderRadius: 1 }}>
-                      <div style={{ width: `${(counts[i] / mx) * 100}%`, height: "100%", background: OH_HUM[i], borderRadius: 1, transition: "width .6s ease" }} />
-                    </div>
-                    <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: "#9898A4", width: 12, textAlign: "right" }}>{counts[i]}</span>
-                  </div>
-                ));
-              })()}
-            </SideSection>
-
-            {/* 대운 */}
-            <SideSection label="대운 흐름">
-              {result.daeun.map((d: DaeunItem) => (
-                <div key={d.startAge} style={{
-                  display: "flex", alignItems: "center", gap: 8, padding: "5px 8px",
-                  borderRadius: "6px", marginBottom: 2,
-                  background: d.isCurrent ? "rgba(46,46,56,0.06)" : "transparent",
-                  border: d.isCurrent ? "1px solid rgba(46,46,56,0.25)" : "1px solid transparent",
-                }}>
-                  <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: d.isCurrent ? "#2E2E38" : "#9898A4", minWidth: 44, letterSpacing: "0.02em" }}>{d.startAge}–{d.endAge}세</span>
-                  <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 13, color: d.isCurrent ? "#2E2E38" : OH_HUM[CG_OH[d.cg]] }}>{CG[d.cg]}</span>
-                  <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 13, color: d.isCurrent ? "#2E2E38" : OH_HUM[JJ_OH[d.jj]] }}>{JJ[d.jj]}</span>
-                  {d.isCurrent && <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 8, color: "#2E2E38", marginLeft: "auto", letterSpacing: "0.1em" }}>NOW</span>}
-                </div>
+            {/* 새 채팅 + 검색 */}
+            <div style={{ padding: "6px 10px", flexShrink: 0, display: "flex", flexDirection: "column", gap: 1 }}>
+              {[{ icon: "M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z", label: "새 채팅", action: () => { setMessages([]); } },
+                { icon: "M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z", label: "검색", action: () => {} }
+              ].map(item => (
+                <button key={item.label} onClick={item.action} style={{ width: "100%", display: "flex", alignItems: "center", height: 32, padding: "0 10px", borderRadius: 6, cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, fontWeight: 400, color: "#3A3A44", background: "transparent", border: "none", gap: 10, transition: "background 0.12s" }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "#F7F7FA")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B6B78" strokeWidth="2"><path d={item.icon}/></svg>
+                  <span>{item.label}</span>
+                </button>
               ))}
-            </SideSection>
-
-            {/* 세운 */}
-            <SideSection label={`${new Date().getFullYear()} 세운`}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 22, color: OH_HUM[CG_OH[result.seun.cg]] }}>{CG[result.seun.cg]}</span>
-                <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 22, color: OH_HUM[JJ_OH[result.seun.jj]] }}>{JJ[result.seun.jj]}</span>
-                <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11, color: "#9898A4" }}>{CG_HJ[result.seun.cg]}{JJ_HJ[result.seun.jj]}</span>
-              </div>
-            </SideSection>
-
-            {/* 궁합 */}
-            <div style={{ padding: "0 12px", marginTop: 4 }}>
-              <button onClick={() => setShowPartner(!showPartner)} style={{
-                width: "100%", padding: "8px 12px", background: showPartner ? "rgba(46,46,56,0.06)" : "transparent",
-                border: "1px solid #C8C8D0", borderRadius: "6px",
-                fontFamily: "'Geist Mono', monospace", fontSize: 10, fontWeight: 600,
-                letterSpacing: "0.12em", textTransform: "uppercase",
-                color: showPartner ? "#2E2E38" : "#6B6B78",
-                cursor: "pointer", display: "flex", alignItems: "center", gap: 8,
-                transition: "all 0.12s",
-              }}>
-                <span>💑</span> 궁합 분석
-              </button>
             </div>
 
-            {showPartner && (
-              <div style={{ padding: "12px 12px 0" }} className="fade-in">
-                <div style={{ background: "#F7F7FA", border: "1px solid #E2E2E8", borderRadius: "8px", padding: "14px 14px 12px" }}>
-                  <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.20em", textTransform: "uppercase", color: "#9898A4", marginBottom: 12 }}>상대방 정보</p>
-                  {([["년", "year", "1988"], ["월", "month", "3"], ["일", "day", "15"]] as const).map(([l, k, ph]) => (
-                    <div key={k} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                      <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: "#9898A4", width: 14, letterSpacing: "0.1em" }}>{l.toUpperCase()}</span>
-                      <input style={{
-                        flex: 1, background: "#FFFFFF", border: "1px solid #C8C8D0",
-                        borderRadius: "4px", padding: "6px 10px",
-                        fontFamily: "'Geist Mono', monospace", fontSize: 12, color: "#111116",
-                        outline: "none", letterSpacing: "0.02em",
-                      }} type="number" placeholder={ph} value={(partner as any)[k]}
-                        onChange={e => updP(k, e.target.value)}
-                        onFocus={e => (e.currentTarget.style.borderColor = "rgba(46,46,56,0.25)")}
-                        onBlur={e => (e.currentTarget.style.borderColor = "#C8C8D0")} />
+            {/* 내 사주 */}
+            {result && (<>
+              <div style={{ padding: "8px 20px 4px", flexShrink: 0 }}>
+                <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, fontWeight: 500, letterSpacing: "0.20em", textTransform: "uppercase", color: "#9898A4", margin: 0 }}>내 사주</p>
+              </div>
+              <div style={{ padding: "0 10px", flexShrink: 0 }}>
+                <div style={{ background: "#F7F7FA", border: "0.5px solid #E2E2E8", borderRadius: 8, padding: 10 }}>
+                  {/* 이름 + caret */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                      <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#2E2E38", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 8, fontWeight: 600, color: "#fff" }}>{form.name ? form.name.slice(0,1) : "나"}</span>
+                      </div>
+                      <span style={{ fontSize: 13, fontWeight: 500, color: "#111116" }}>{form.name || "내 사주"}</span>
                     </div>
-                  ))}
-                  <div style={{ marginBottom: 8 }}>
-                    <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, letterSpacing: "0.10em", textTransform: "uppercase", color: "#9898A4", marginBottom: 6 }}>시</p>
-                    <select style={{
-                      width: "100%", background: "#FFFFFF", border: "1px solid #C8C8D0",
-                      borderRadius: "4px", padding: "6px 10px",
-                      fontFamily: "'Geist Mono', monospace", fontSize: 11, color: "#111116",
-                      outline: "none", cursor: "pointer",
-                    }} value={partner.hour} onChange={e => updP("hour", +e.target.value)}>
-                      {HOURS.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
-                    </select>
+                    <button onClick={() => setSideSecondary(true)} title="상세 정보" style={{ width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer", borderRadius: 4, color: "#9898A4" }}
+                      onMouseEnter={e => (e.currentTarget.style.background = "#E2E2E8")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+                    </button>
                   </div>
-                  <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
-                    {([["F", "여성"], ["M", "남성"]] as const).map(([v, l]) => (
-                      <button key={v} onClick={() => updP("gender", v)} style={{
-                        flex: 1, padding: "6px 0",
-                        background: partner.gender === v ? "rgba(46,46,56,0.06)" : "transparent",
-                        border: `1px solid ${partner.gender === v ? "rgba(46,46,56,0.25)" : "#C8C8D0"}`,
-                        borderRadius: "4px", cursor: "pointer",
-                        fontFamily: "'Geist Mono', monospace", fontSize: 10, fontWeight: 600,
-                        letterSpacing: "0.08em", textTransform: "uppercase",
-                        color: partner.gender === v ? "#2E2E38" : "#6B6B78",
-                      }}>{l}</button>
+                  {/* 사주 4기둥 */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 3 }}>
+                    {[{ l: "시주", p: result.saju.hp }, { l: "일주", p: result.saju.dp }, { l: "월주", p: result.saju.mp }, { l: "년주", p: result.saju.yp }].map(({ l, p }) => (
+                      <div key={l} style={{ background: "#FFFFFF", border: "0.5px solid #E2E2E8", borderRadius: 4, padding: "5px 2px", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                        {p ? (<>
+                          <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 14, lineHeight: 1.2, color: OH_HUM[CG_OH[p.cg]] }}>{CG[p.cg]}</span>
+                          <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 14, lineHeight: 1.2, color: OH_HUM[JJ_OH[p.jj]] }}>{JJ[p.jj]}</span>
+                        </>) : (<><span style={{ fontSize: 13, color: "#C8C8D0" }}>?</span><span style={{ fontSize: 13, color: "#C8C8D0" }}>?</span></>)}
+                        <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 7, color: "#6B6B78", marginTop: 1 }}>{l}</span>
+                      </div>
                     ))}
                   </div>
-                  <button onClick={analyzePartner} style={{
-                    width: "100%", padding: "9px", background: "linear-gradient(135deg, #F2F2F5, #C8C8D0, #9898A8)",
-                    border: "none", borderRadius: "4px", cursor: "pointer",
-                    fontFamily: "'Geist Mono', monospace", fontSize: 11, fontWeight: 600,
-                    letterSpacing: "0.08em", textTransform: "uppercase", color: "#FFFFFF",
-                  }}>궁합 분석하기</button>
                 </div>
               </div>
-            )}
 
-            {partnerSaju && (
-              <SideSection label="상대 사주">
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 4 }}>
-                  {[{ l: "일주", p: partnerSaju.dp }, { l: "월주", p: partnerSaju.mp }, { l: "년주", p: partnerSaju.yp }].map(({ l, p }) => (
-                    <div key={l} style={{ background: "#F7F7FA", border: "1px solid #E2E2E8", borderRadius: "6px", padding: "8px 4px", display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                      <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 16, color: OH_HUM[CG_OH[p.cg]] }}>{CG[p.cg]}</span>
-                      <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 16, color: OH_HUM[JJ_OH[p.jj]] }}>{JJ[p.jj]}</span>
-                      <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 8, color: "#9898A4" }}>{l}</span>
+              {/* 사주 정보 추가 버튼 */}
+              <div style={{ padding: "8px 10px 0", flexShrink: 0 }}>
+                <button onClick={() => setShowPartner(!showPartner)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: "transparent", border: "0.5px dashed #C8C8D0", borderRadius: 6, cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, color: "#9898A4", transition: "all 0.12s" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#F7F7FA"; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+                  사주 정보 추가
+                </button>
+              </div>
+
+              {/* 궁합 상대방 입력 패널 */}
+              {showPartner && (
+                <div style={{ padding: "8px 10px 0", flexShrink: 0 }} className="fade-in">
+                  <div style={{ background: "#F7F7FA", border: "1px solid #E2E2E8", borderRadius: 8, padding: "14px 14px 12px" }}>
+                    <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.20em", textTransform: "uppercase", color: "#9898A4", marginBottom: 12 }}>상대방 정보</p>
+                    {([["년", "year", "1988"], ["월", "month", "3"], ["일", "day", "15"]] as const).map(([l, k, ph]) => (
+                      <div key={k} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                        <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: "#9898A4", width: 14 }}>{l.toUpperCase()}</span>
+                        <input style={{ flex: 1, background: "#FFFFFF", border: "1px solid #C8C8D0", borderRadius: 4, padding: "6px 10px", fontFamily: "'Geist Mono', monospace", fontSize: 12, color: "#111116", outline: "none" }}
+                          type="number" placeholder={ph} value={(partner as any)[k]}
+                          onChange={e => updP(k, e.target.value)}
+                          onFocus={e => (e.currentTarget.style.borderColor = "rgba(46,46,56,0.25)")}
+                          onBlur={e => (e.currentTarget.style.borderColor = "#C8C8D0")} />
+                      </div>
+                    ))}
+                    <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                      {([["F", "여성"], ["M", "남성"]] as const).map(([v, l]) => (
+                        <button key={v} onClick={() => updP("gender", v)} style={{ flex: 1, padding: "6px 0", background: partner.gender === v ? "rgba(46,46,56,0.06)" : "transparent", border: `1px solid ${partner.gender === v ? "rgba(46,46,56,0.25)" : "#C8C8D0"}`, borderRadius: 4, cursor: "pointer", fontFamily: "'Geist Mono', monospace", fontSize: 10, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: partner.gender === v ? "#2E2E38" : "#6B6B78" }}>{l}</button>
+                      ))}
                     </div>
-                  ))}
+                    <button onClick={analyzePartner} style={{ width: "100%", padding: 9, background: "linear-gradient(135deg, #F2F2F5, #C8C8D0, #9898A8)", border: "none", borderRadius: 4, cursor: "pointer", fontFamily: "'Geist Mono', monospace", fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#FFFFFF" }}>궁합 분석하기</button>
+                  </div>
                 </div>
-              </SideSection>
-            )}
+              )}
+            </>)}
 
-          </div>
-        )}
+            {/* 구분선 */}
+            <div style={{ margin: "10px 10px 0", borderTop: "0.5px solid #E2E2E8", flexShrink: 0 }} />
 
-        {/* ── 사이드바 푸터 ── */}
-        {!sideCollapsed && (
-          <div style={{ borderTop: "1px solid #E2E2E8", padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-            {/* 다시 입력 아이콘 */}
-            <button title="다시 입력" onClick={() => { setStep("form"); setMessages([]); setResult(null); setPartnerSaju(null); }}
-              style={{ width: 32, height: 32, background: "transparent", border: "1px solid #E2E2E8", borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#9898A4" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "#F7F7FA"; e.currentTarget.style.color = "#6B6B78"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#9898A4"; }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4"/></svg>
-            </button>
-            {/* 유저 이메일 */}
-            {user && <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11, color: "#9898A4", flex: 1, textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", padding: "0 8px" }}>{user.email}</span>}
-            {/* 세팅 아이콘 */}
-            <button title="설정"
-              style={{ width: 32, height: 32, background: "transparent", border: "1px solid #E2E2E8", borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#9898A4" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "#F7F7FA"; e.currentTarget.style.color = "#6B6B78"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#9898A4"; }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            </button>
+            {/* 채팅 히스토리 */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "8px 10px 0" }}>
+              <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, fontWeight: 500, letterSpacing: "0.20em", textTransform: "uppercase", color: "#9898A4", padding: "4px 10px 6px", margin: 0 }}>최근 채팅</p>
+              <div style={{ display: "flex", alignItems: "center", height: 32, padding: "0 10px", borderRadius: 6, color: "#9898A4" }}>
+                <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: "#9898A4" }}>채팅 기록이 여기에 표시됩니다</span>
+              </div>
+            </div>
+
+            {/* 풋터 */}
+            <div style={{ borderTop: "1px solid #E2E2E8", padding: "8px 10px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#EFEFF2", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 600, color: "#2E2E38" }}>{user?.email?.slice(0,1).toUpperCase() || "U"}</span>
+                </div>
+                <span style={{ flex: 1 }} />
+              </div>
+              <div style={{ display: "flex", gap: 1 }}>
+                <button title="사주 다시 입력" onClick={() => { setStep("form"); setMessages([]); setResult(null); setPartnerSaju(null); setSideSecondary(false); }}
+                  style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer", borderRadius: 6, color: "#9898A4" }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "#EFEFF2")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4"/></svg>
+                </button>
+                <button title="설정" style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer", borderRadius: 6, color: "#9898A4" }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "#EFEFF2")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </aside>
@@ -600,78 +600,3 @@ function FormPage({ form, upd, onSubmit }: { form: Form; upd: any; onSubmit: () 
   );
 }
 
-// ── 로그인 페이지 ─────────────────────────────────────────
-function LoginPage({ onGoogleLogin }: { onGoogleLogin: () => void }) {
-  return (
-    <div style={{ minHeight: "100vh", background: "#FAFAFA", display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 16px", fontFamily: "'IBM Plex Sans', sans-serif" }}>
-      <div style={{ width: "100%", maxWidth: 400 }}>
-        {/* 로고 */}
-        <div style={{ textAlign: "center", marginBottom: 36 }}>
-          <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 52, height: 52, borderRadius: "50%", background: "#EFEFF2", marginBottom: 16 }}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="4" fill="#111116"/>
-              <circle cx="12" cy="12" r="7" stroke="#111116" strokeWidth="1" strokeOpacity="0.35"/>
-              <circle cx="12" cy="12" r="10.5" stroke="#111116" strokeWidth="0.5" strokeOpacity="0.2"/>
-            </svg>
-          </div>
-          <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.28em", textTransform: "uppercase", color: "#9898A4", marginBottom: 14 }}>사주팔자 · AI 운명 상담</p>
-          <h1 style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 32, fontWeight: 600, letterSpacing: "-0.02em", color: "#111116", margin: "0 0 8px" }}>Aura</h1>
-          <p style={{ fontSize: 14, color: "#6B6B78" }}>사주팔자 기반 AI 운명 상담</p>
-        </div>
-
-        {/* 로그인 카드 */}
-        <div style={{ background: "#FFFFFF", border: "1px solid #E2E2E8", borderRadius: 12, padding: "32px 28px", boxShadow: "0 4px 12px rgba(17,17,22,0.08)" }}>
-          <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.20em", textTransform: "uppercase", color: "#9898A4", marginBottom: 24 }}>로그인 / 회원가입</p>
-
-          {/* 구글 로그인 버튼 */}
-          <button onClick={onGoogleLogin} style={{
-            width: "100%", padding: "12px 0", background: "#FFFFFF",
-            border: "1px solid #C8C8D0", borderRadius: 6, cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-            fontFamily: "'Geist Mono', monospace", fontSize: 12, fontWeight: 600,
-            letterSpacing: "0.06em", color: "#2E2E38", transition: "all 0.15s",
-          }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(46,46,56,0.4)"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(46,46,56,0.06)"; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = "#C8C8D0"; e.currentTarget.style.boxShadow = "none"; }}>
-            {/* 구글 G 아이콘 */}
-            <svg width="18" height="18" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-            </svg>
-            Google로 계속하기
-          </button>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "20px 0" }}>
-            <div style={{ flex: 1, height: 1, background: "#E2E2E8" }} />
-            <span style={{ fontSize: 11, color: "#9898A4", fontFamily: "'Geist Mono', monospace", letterSpacing: "0.08em" }}>또는</span>
-            <div style={{ flex: 1, height: 1, background: "#E2E2E8" }} />
-          </div>
-
-          {/* 이메일 로그인 (준비 중) */}
-          <div style={{ marginBottom: 14 }}>
-            <label style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.14em", textTransform: "uppercase", color: "#9898A4", display: "block", marginBottom: 5 }}>이메일</label>
-            <input type="email" placeholder="your@email.com" style={{ width: "100%", background: "#FAFAFA", border: "1px solid #C8C8D0", borderRadius: 4, padding: "10px 14px", fontFamily: "'Geist Mono', monospace", fontSize: 13, color: "#111116", outline: "none" }}
-              onFocus={e => { e.currentTarget.style.borderColor = "rgba(46,46,56,0.4)"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(46,46,56,0.06)"; }}
-              onBlur={e => { e.currentTarget.style.borderColor = "#C8C8D0"; e.currentTarget.style.boxShadow = "none"; }} />
-          </div>
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.14em", textTransform: "uppercase", color: "#9898A4", display: "block", marginBottom: 5 }}>비밀번호</label>
-            <input type="password" placeholder="••••••••" style={{ width: "100%", background: "#FAFAFA", border: "1px solid #C8C8D0", borderRadius: 4, padding: "10px 14px", fontFamily: "'Geist Mono', monospace", fontSize: 13, color: "#111116", outline: "none" }}
-              onFocus={e => { e.currentTarget.style.borderColor = "rgba(46,46,56,0.4)"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(46,46,56,0.06)"; }}
-              onBlur={e => { e.currentTarget.style.borderColor = "#C8C8D0"; e.currentTarget.style.boxShadow = "none"; }} />
-          </div>
-          <button style={{ width: "100%", padding: "11px 0", background: "#2E2E38", border: "none", borderRadius: 4, fontFamily: "'Geist Mono', monospace", fontSize: 11, fontWeight: 600, letterSpacing: "0.10em", textTransform: "uppercase", color: "#fff", cursor: "pointer", opacity: 0.4 }} disabled>
-            이메일 로그인 (준비 중)
-          </button>
-
-          <p style={{ fontSize: 11, color: "#9898A4", textAlign: "center", marginTop: 16, lineHeight: 1.6 }}>
-            계속하면 <span style={{ color: "#2E2E38", textDecoration: "underline", cursor: "pointer" }}>이용약관</span> 및{" "}
-            <span style={{ color: "#2E2E38", textDecoration: "underline", cursor: "pointer" }}>개인정보처리방침</span>에 동의하는 것으로 간주됩니다.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}

@@ -1,1 +1,103 @@
-/* Global styles */
+@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, #root { height: 100%; }
+
+:root {
+  --font-display: "Geist Mono", monospace;
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
+
+  /* Dark theme (workspace) */
+  --bg-deep: #060608;
+  --bg: #0A0A0C;
+  --surface: #141418;
+  --surface-lt: #1A1A20;
+  --surface-md: #202028;
+  --accent-dim: rgba(200,200,208,0.09);
+  --accent-glow: rgba(200,200,208,0.04);
+  --accent-mid: rgba(200,200,208,0.15);
+
+  --text-primary: #F2F2F5;
+  --text-md: #C0C0C8;
+  --text-lt: #707080;
+  --text-muted: #505060;
+  --text-disabled: #2E2E38;
+  --text-accent: #C8C8D0;
+  --text-accent-dk: #9898A8;
+  --text-success: #3DD68C;
+  --text-error: #F06B6B;
+  --text-info: #6B9EF0;
+  --text-warning: #E0A34A;
+
+  --border-lt: #1C1C26;
+  --border: #242430;
+  --border-dk: #32323F;
+  --border-accent: rgba(200,200,208,0.18);
+
+  --btn-primary-text: #0A0A0C;
+  --btn-ghost-hover: #1A1A20;
+
+  --radius-sm: 2px; --radius: 4px; --radius-md: 6px;
+  --radius-lg: 8px; --radius-xl: 10px; --radius-2xl: 12px;
+  --radius-full: 9999px;
+
+  --space-1: 4px; --space-2: 8px; --space-3: 12px;
+  --space-4: 16px; --space-5: 20px; --space-6: 24px;
+  --space-8: 32px; --space-10: 40px;
+}
+
+/* Light theme (onboarding/form) */
+.light {
+  --bg: #FAFAFA;
+  --bg-warm: #F4F4F6;
+  --surface: #FFFFFF;
+  --surface-lt: #F7F7FA;
+  --surface-md: #EFEFF2;
+  --accent-dim: rgba(46,46,56,0.06);
+
+  --text-primary: #111116;
+  --text-md: #3A3A44;
+  --text-lt: #6B6B78;
+  --text-muted: #9898A4;
+  --text-disabled: #C8C8D0;
+  --text-accent: #2E2E38;
+  --text-accent-dk: #9898A8;
+
+  --border-lt: #EDEDF0;
+  --border: #E2E2E8;
+  --border-dk: #C8C8D0;
+  --border-accent: rgba(46,46,56,0.25);
+
+  --btn-primary-bg: #2E2E38;
+  --btn-primary-hover: #1A1A24;
+  --btn-primary-text: #FFFFFF;
+  --btn-outline-bg: #FFFFFF;
+  --btn-ghost-hover: #F4F4F6;
+
+  --shadow-sm: 0 1px 3px rgba(17,17,22,0.06), 0 1px 2px rgba(17,17,22,0.04);
+  --shadow-md: 0 4px 12px rgba(17,17,22,0.08);
+  --shadow-lg: 0 10px 24px rgba(17,17,22,0.10);
+  --shadow-xl: 0 20px 40px rgba(17,17,22,0.12);
+}
+
+body { font-family: var(--font-body); background: var(--bg); color: var(--text-primary); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-dk); border-radius: 2px; }
+
+/* Animations */
+@keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes typingPulse { 0%,60%,100% { opacity:0.25; } 30% { opacity:1; } }
+@keyframes slideDown { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+
+.fade-in { animation: fadeIn 0.22s ease; }
+
+/* Remove number input spinners */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number] { -moz-appearance: textfield; }
+
+@keyframes slideIn { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
