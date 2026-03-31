@@ -96,12 +96,15 @@ export default function Page() {
 
   useEffect(() => {
     let subscription: any = null;
+    console.log("[saju] initializing, calling getSupabase...");
     getSupabase().then(async (sb: any) => {
+      console.log("[saju] getSupabase returned:", sb ? "client" : "null");
       if (!sb) { setAuthLoading(false); setStep("form"); return; }
       setSupabase(sb);
       try {
         const { data: { session } } = await sb.auth.getSession();
         const u = session?.user ?? null;
+        console.log("[saju] session user:", u ? u.email : "none");
         setUser(u);
         if (u) {
           try { await loadProfile(u.id, sb); } catch { setStep("form"); }
