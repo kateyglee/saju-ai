@@ -454,10 +454,13 @@ export default function Page() {
 }
 
 // ── 사이드바 섹션 컴포넌트 ────────────────────────────────────────────────────
-function SideSection({ label, children }: { label: string; children: React.ReactNode }) {
+function SideSection({ label, children, right }: { label: string; children: React.ReactNode; right?: React.ReactNode }) {
   return (
     <div style={{ padding: "0 12px", marginBottom: 4 }}>
-      <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.20em", textTransform: "uppercase", color: "#9898A4", margin: "12px 0 8px", paddingLeft: 2 }}>{label}</p>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", margin: "12px 0 8px", paddingLeft: 2 }}>
+        <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.20em", textTransform: "uppercase", color: "#9898A4", margin: 0 }}>{label}</p>
+        {right}
+      </div>
       {children}
     </div>
   );
