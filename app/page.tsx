@@ -57,9 +57,10 @@ export default function Page() {
     const s = sb || supabase;
     if (!s) { console.log("[saju] loadProfile: no supabase client"); setStep("form"); return; }
     console.log("[saju] loadProfile: querying profiles for", userId);
-    const { data: profile, error } = await s.from("profiles").select("*").eq("id", userId).single();
+    const { data: profile, error } = await s.from("profiles").select("*").eq("id", userId).maybeSingle();
     console.log("[saju] loadProfile result:", { profile, error: error?.message });
-    if (error || !profile) { setStep("form"); return; }
+    if (error) { console.log("[saju] profile query error, showing form"); setStep("form"); return; }
+    if (!profile) { console.log("[saju] no profile found, showing form"); setStep("form"); return; }
     if (profile.birth_year && profile.birth_month && profile.birth_day) {
       const f: Form = {
         name: profile.name || "",
@@ -132,12 +133,13 @@ export default function Page() {
       setAuthLoading(false);
 
       try {
-        const { data: { subscription: sub } } = sb.auth.onAuthStateChange(async (_event: any, session: any) => {
+        const { data: { subscription: sub } } = sb.auth.onAuthStateChange(async (event: any, session: any) => {
+          console.log("[saju] auth state changed:", event);
           const authUser = session?.user ?? null;
           setUser(authUser);
-          if (authUser) {
+          if (event === "SIGNED_IN" && authUser) {
             try { await loadProfile(authUser.id, sb); } catch { setStep("form"); }
-          } else {
+          } else if (event === "SIGNED_OUT" || !authUser) {
             setStep("login");
           }
         });
