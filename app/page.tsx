@@ -37,7 +37,7 @@ const OH_HUM = ["#1A9E5C","#C47A10","#6B6B78","#1D5FA8","#505060"];
 export default function Page() {
   const [user, setUser]           = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [step, setStep]           = useState<"form" | "chat">("form");
+  const [step, setStep]           = useState<"login" | "form" | "chat">("login");
   const [form, setForm]           = useState<Form>({ name: "", year: "", month: "", day: "", hour: 11, gender: "F" });
   const [result, setResult]       = useState<SajuResult | null>(null);
   const [sajuCtx, setSajuCtx]     = useState("");
@@ -53,14 +53,64 @@ export default function Page() {
 
   const supabase = createClient();
 
+  // ── Load saved profile and jump to chat if exists ──
+  async function loadProfile(userId: string) {
+    if (!supabase) return;
+    const { data: profile } = await supabase.from("profiles").select("*").eq("id", userId).single();
+    if (profile && profile.birth_year && profile.birth_month && profile.birth_day) {
+      const f: Form = {
+        name: profile.name || "",
+        year: String(profile.birth_year),
+        month: String(profile.birth_month),
+        day: String(profile.birth_day),
+        hour: profile.birth_hour ?? 11,
+        gender: profile.gender || "F",
+      };
+      setForm(f);
+      const r = calcAll(profile.birth_year, profile.birth_month, profile.birth_day, profile.birth_hour ?? 11, f.gender);
+      const ctx = sajuToPromptContext(r, f.gender, profile.birth_year, profile.birth_month, profile.birth_day);
+      setResult(r); setSajuCtx(ctx);
+      const dp = r.saju.dp;
+      const cd = r.currentDaeun;
+      const sy = new Date().getFullYear();
+      const greeting = `안녕하세요, ${f.name || ""}님. ${f.year}년 ${f.month}월 ${f.day}일생 ${f.gender === "F" ? "여성" : "남성"}분의 사주를 불러왔습니다.\n\n일간(日干)은 **${CG[dp.cg]}${JJ[dp.jj]}(${CG_HJ[dp.cg]}${JJ_HJ[dp.jj]})**으로 이것이 당신의 핵심 기운입니다.\n\n현재 **${cd ? CG[cd.cg] + JJ[cd.jj] + " 대운" : "대운 산출 중"}** 흐름이며, **${sy}년 ${CG[r.seun.cg]}${JJ[r.seun.jj]} 세운**이 운세에 영향을 주고 있어요.\n\n무엇이든 물어보세요.`;
+      setMessages([{ role: "assistant", content: greeting }]);
+      setStep("chat");
+
+      // Create a new chat session
+      supabase.from("chat_sessions").insert({
+        user_id: userId,
+        messages: [{ role: "assistant", content: greeting }],
+        saju_context: ctx,
+        created_at: new Date().toISOString(),
+      }).select("id").single().then(({ data }: any) => {
+        if (data) setSessionId(data.id);
+      });
+    } else {
+      setStep("form");
+    }
+  }
+
   useEffect(() => {
-    if (!supabase) { setAuthLoading(false); return; }
-    supabase.auth.getSession().then(({ data: { session } }: any) => {
-      setUser(session?.user ?? null);
+    if (!supabase) { setAuthLoading(false); setStep("form"); return; }
+    supabase.auth.getSession().then(async ({ data: { session } }: any) => {
+      const u = session?.user ?? null;
+      setUser(u);
+      if (u) {
+        await loadProfile(u.id);
+      } else {
+        setStep("login");
+      }
       setAuthLoading(false);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
-      setUser(session?.user ?? null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: any, session: any) => {
+      const u = session?.user ?? null;
+      setUser(u);
+      if (u && step === "login") {
+        await loadProfile(u.id);
+      } else if (!u) {
+        setStep("login");
+      }
     });
     return () => subscription.unsubscribe();
   }, []);
@@ -166,6 +216,13 @@ export default function Page() {
     } finally { setLoading(false); }
   }
 
+  if (authLoading) return (
+    <div style={{ minHeight: "100vh", background: "#FAFAFA", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ width: 20, height: 20, border: "2px solid #E2E2E8", borderTopColor: "#2E2E38", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+    </div>
+  );
+
+  if (step === "login") return <LoginPage onGoogleLogin={signInWithGoogle} />;
   if (step === "form") return <FormPage form={form} upd={upd} onSubmit={startChat} />;
 
   return (
@@ -600,3 +657,48 @@ function FormPage({ form, upd, onSubmit }: { form: Form; upd: any; onSubmit: () 
   );
 }
 
+// ── 로그인 페이지 ─────────────────────────────────────────
+function LoginPage({ onGoogleLogin }: { onGoogleLogin: () => void }) {
+  return (
+    <div style={{ minHeight: "100vh", background: "#FAFAFA", display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 16px", fontFamily: "'IBM Plex Sans', sans-serif" }}>
+      <div style={{ width: "100%", maxWidth: 400 }}>
+        <div style={{ textAlign: "center", marginBottom: 36 }}>
+          <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 52, height: 52, borderRadius: "50%", background: "#EFEFF2", marginBottom: 16 }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="4" fill="#111116"/>
+              <circle cx="12" cy="12" r="7" stroke="#111116" strokeWidth="1" strokeOpacity="0.35"/>
+              <circle cx="12" cy="12" r="10.5" stroke="#111116" strokeWidth="0.5" strokeOpacity="0.2"/>
+            </svg>
+          </div>
+          <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.28em", textTransform: "uppercase", color: "#9898A4", marginBottom: 14 }}>사주팔자 · AI 운명 상담</p>
+          <h1 style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 32, fontWeight: 600, letterSpacing: "-0.02em", color: "#111116", margin: "0 0 8px" }}>Aura</h1>
+          <p style={{ fontSize: 14, color: "#6B6B78" }}>사주팔자 기반 AI 운명 상담</p>
+        </div>
+        <div style={{ background: "#FFFFFF", border: "1px solid #E2E2E8", borderRadius: 12, padding: "32px 28px", boxShadow: "0 4px 12px rgba(17,17,22,0.08)" }}>
+          <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.20em", textTransform: "uppercase", color: "#9898A4", marginBottom: 24 }}>로그인 / 회원가입</p>
+          <button onClick={onGoogleLogin} style={{
+            width: "100%", padding: "12px 0", background: "#FFFFFF",
+            border: "1px solid #C8C8D0", borderRadius: 6, cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+            fontFamily: "'Geist Mono', monospace", fontSize: 12, fontWeight: 600,
+            letterSpacing: "0.06em", color: "#2E2E38", transition: "all 0.15s",
+          }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(46,46,56,0.4)"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(46,46,56,0.06)"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "#C8C8D0"; e.currentTarget.style.boxShadow = "none"; }}>
+            <svg width="18" height="18" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            Google로 계속하기
+          </button>
+          <p style={{ fontSize: 11, color: "#9898A4", textAlign: "center", marginTop: 20, lineHeight: 1.6 }}>
+            계속하면 <span style={{ color: "#2E2E38", textDecoration: "underline", cursor: "pointer" }}>이용약관</span> 및{" "}
+            <span style={{ color: "#2E2E38", textDecoration: "underline", cursor: "pointer" }}>개인정보처리방침</span>에 동의하는 것으로 간주됩니다.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
