@@ -55,8 +55,9 @@ export default function Page() {
 
   // ── Load saved profile and jump to chat if exists ──
   async function loadProfile(userId: string) {
-    if (!supabase) return;
-    const { data: profile } = await supabase.from("profiles").select("*").eq("id", userId).single();
+    if (!supabase) { setStep("form"); return; }
+    const { data: profile, error } = await supabase.from("profiles").select("*").eq("id", userId).single();
+    if (error || !profile) { setStep("form"); return; }
     if (profile && profile.birth_year && profile.birth_month && profile.birth_day) {
       const f: Form = {
         name: profile.name || "",
@@ -97,17 +98,20 @@ export default function Page() {
       const u = session?.user ?? null;
       setUser(u);
       if (u) {
-        await loadProfile(u.id);
+        try { await loadProfile(u.id); } catch { setStep("form"); }
       } else {
         setStep("login");
       }
       setAuthLoading(false);
+    }).catch(() => {
+      setAuthLoading(false);
+      setStep("login");
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: any, session: any) => {
       const u = session?.user ?? null;
       setUser(u);
       if (u && step === "login") {
-        await loadProfile(u.id);
+        try { await loadProfile(u.id); } catch { setStep("form"); }
       } else if (!u) {
         setStep("login");
       }
