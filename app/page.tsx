@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getSupabase } from "@/lib/supabase";
 import { calcAll, calcSaju, sajuToPromptContext, HOURS, CG, CG_HJ, JJ, JJ_HJ, OH, OH_HJ, OH_C, CG_OH, JJ_OH, ohCounts } from "@/lib/saju";
 import type { SajuResult, DaeunItem, Saju } from "@/lib/saju";
@@ -58,6 +58,7 @@ export default function Page() {
   const [editingPersonId, setEditingPersonId] = useState<string | null>(null);
   const [personForm, setPersonForm] = useState<PartnerForm>({ name: "", year: "", month: "", day: "", hour: -1, gender: "M" });
   const [activePersonId, setActivePersonId] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   // ── Load chat history list ──
   async function loadChatHistory(userId: string, sb: any) {
@@ -355,17 +356,24 @@ export default function Page() {
     }
   }
 
+  function stopGeneration() {
+    if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
+  }
+
   async function send(override?: string) {
     const txt = override ?? input;
     if (!txt.trim() || loading) return;
     const userMsg: Message = { role: "user", content: txt };
     const newMsgs = [...messages, userMsg];
     setMessages(newMsgs); setInput(""); setLoading(true);
+    const controller = new AbortController();
+    abortRef.current = controller;
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: newMsgs, sajuContext: sajuCtx }),
+        signal: controller.signal,
       });
       if (!res.ok) throw new Error();
       const reader = res.body!.getReader();
@@ -385,12 +393,22 @@ export default function Page() {
           messages: finalMessages,
           updated_at: new Date().toISOString(),
         }).eq("id", sessionId);
-        // Refresh sidebar history
         loadChatHistory(user.id, supabase);
       }
-    } catch {
-      setMessages(prev => [...prev, { role: "assistant", content: "오류가 발생했습니다. 다시 시도해주세요." }]);
-    } finally { setLoading(false); }
+    } catch (e: any) {
+      if (e?.name === "AbortError") {
+        // Stopped by user — save what we have so far
+        if (sessionId && user && supabase) {
+          const partialMessages = [...newMsgs, { role: "assistant" as const, content: messages[messages.length - 1]?.content || "" }];
+          await supabase.from("chat_sessions").update({
+            messages: partialMessages, updated_at: new Date().toISOString(),
+          }).eq("id", sessionId);
+          loadChatHistory(user.id, supabase);
+        }
+      } else {
+        setMessages(prev => [...prev, { role: "assistant", content: "오류가 발생했습니다. 다시 시도해주세요." }]);
+      }
+    } finally { setLoading(false); abortRef.current = null; }
   }
 
   if (authLoading) return (
@@ -724,17 +742,17 @@ export default function Page() {
             }} placeholder="무엇이 궁금하세요?"
               value={input} onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()} />
-            <button onClick={() => send()} disabled={loading || !input.trim()} style={{
+            <button onClick={() => loading ? stopGeneration() : send()} disabled={!loading && !input.trim()} style={{
               width: 32, height: 32, flexShrink: 0,
-              background: loading || !input.trim() ? "#EFEFF2" : "linear-gradient(135deg, #F2F2F5, #C8C8D0, #9898A8)",
+              background: loading ? "#2E2E38" : (!input.trim() ? "#EFEFF2" : "linear-gradient(135deg, #F2F2F5, #C8C8D0, #9898A8)"),
               border: "none", borderRadius: "6px",
               display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: loading || !input.trim() ? "not-allowed" : "pointer",
+              cursor: !loading && !input.trim() ? "not-allowed" : "pointer",
               transition: "all 0.15s",
             }}>
               {loading
-                ? <div style={{ width: 12, height: 12, border: "2px solid #C8C8D0", borderTopColor: "#2E2E38", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
-                : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={loading || !input.trim() ? "#9898A4" : "#FFFFFF"} strokeWidth="2.5"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+                ? <svg width="12" height="12" viewBox="0 0 24 24" fill="#FFFFFF" stroke="none"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+                : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={!input.trim() ? "#9898A4" : "#FFFFFF"} strokeWidth="2.5"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
               }
             </button>
           </div>
