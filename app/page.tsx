@@ -310,13 +310,17 @@ export default function Page() {
 
   async function setAsDefault(person: any) {
     if (!supabase || !user) return;
-    // Only switch active chat context — do NOT overwrite the profiles table
+    // Update profiles table so it persists across refreshes
+    await supabase.from("profiles").upsert({
+      id: user.id, name: person.name, year: person.year, month: person.month,
+      day: person.day, hour: person.hour, gender: person.gender, updated_at: new Date().toISOString(),
+    }, { onConflict: "id" });
     setForm({ name: person.name, year: String(person.year), month: String(person.month), day: String(person.day), hour: person.hour, gender: person.gender });
     const r = calcAll(person.year, person.month, person.day, person.hour ?? 11, person.gender);
     const ctx = sajuToPromptContext(r, person.gender, person.year, person.month, person.day);
     setResult(r); setSajuCtx(ctx);
     setActivePersonId(person.id);
-    // Keep modal open — don't close
+    // Keep modal open
   }
 
   function editPerson(p: any) {
