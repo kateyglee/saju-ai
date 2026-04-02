@@ -272,23 +272,28 @@ export default function Page() {
   async function savePerson() {
     console.log("[saju] savePerson called", { editingPersonId, personForm });
     if (!supabase || !user || !personForm.name || !personForm.year || !personForm.month || !personForm.day) {
-      console.log("[saju] savePerson early return — missing fields");
+      console.log("[saju] savePerson early return — missing fields", { supabase: !!supabase, user: !!user, name: personForm.name, year: personForm.year, month: personForm.month, day: personForm.day });
       return;
     }
-    let error: any = null;
-    if (editingPersonId && editingPersonId !== "new") {
-      ({ error } = await supabase.from("people").update({
-        name: personForm.name, year: +personForm.year, month: +personForm.month,
-        day: +personForm.day, hour: +personForm.hour, gender: personForm.gender,
-      }).eq("id", editingPersonId));
-    } else {
-      ({ error } = await supabase.from("people").insert({
-        user_id: user.id, name: personForm.name, year: +personForm.year, month: +personForm.month,
-        day: +personForm.day, hour: +personForm.hour, gender: personForm.gender,
-      }));
+    try {
+      let res: any;
+      if (editingPersonId && editingPersonId !== "new") {
+        res = await supabase.from("people").update({
+          name: personForm.name, year: +personForm.year, month: +personForm.month,
+          day: +personForm.day, hour: +personForm.hour, gender: personForm.gender,
+        }).eq("id", editingPersonId);
+      } else {
+        res = await supabase.from("people").insert({
+          user_id: user.id, name: personForm.name, year: +personForm.year, month: +personForm.month,
+          day: +personForm.day, hour: +personForm.hour, gender: personForm.gender,
+        });
+      }
+      console.log("[saju] savePerson result:", res);
+      if (res.error) { console.error("[saju] savePerson error:", res.error); alert("저장 실패: " + res.error.message); }
+      else console.log("[saju] savePerson success");
+    } catch (e) {
+      console.error("[saju] savePerson exception:", e);
     }
-    if (error) { console.error("[saju] savePerson error:", error); alert("저장 실패: " + error.message); }
-    else console.log("[saju] savePerson success");
     await loadPeople();
     setPersonForm({ name: "", year: "", month: "", day: "", hour: -1, gender: "M" });
     setEditingPersonId(null);
