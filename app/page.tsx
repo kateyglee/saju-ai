@@ -62,6 +62,8 @@ export default function Page() {
   const [showGunghapPicker, setShowGunghapPicker] = useState(false);
   const [gunghapAddMode, setGunghapAddMode] = useState(false); // adding new person inline for 궁합
   const [gunghapForm, setGunghapForm] = useState<PartnerForm>({ name: "", year: "", month: "", day: "", hour: -1, gender: "M" });
+  const [gunghapPartner, setGunghapPartner] = useState<any>(null); // active 궁합 partner for badge + context
+  const [gunghapCtx, setGunghapCtx] = useState<string>(""); // combined saju context when 궁합 active
   const abortRef = useRef<AbortController | null>(null);
   const composingRef = useRef(false);
 
@@ -390,6 +392,9 @@ export default function Page() {
     setGunghapAddMode(false);
     const partnerCtx = buildPartnerContext(person);
     const combinedCtx = sajuCtx + "\n\n" + partnerCtx + "\n\n[궁합 분석 요청] 위 두 사람의 사주를 비교하여 궁합을 분석해주세요.";
+    // Persist partner context for follow-up messages
+    setGunghapPartner(person);
+    setGunghapCtx(combinedCtx);
     // Send with combined context
     const userMsg: Message = { role: "user", content: txt };
     const newMsgs = [...messages, userMsg];
@@ -461,7 +466,7 @@ export default function Page() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: newMsgs, sajuContext: sajuCtx }),
+        body: JSON.stringify({ messages: newMsgs, sajuContext: gunghapPartner ? gunghapCtx : sajuCtx }),
         signal: controller.signal,
       });
       if (!res.ok) throw new Error();
@@ -901,13 +906,29 @@ export default function Page() {
 
         {/* 입력창 */}
         <div style={{ padding: "16px 28px 20px", flexShrink: 0 }}>
+          {/* 궁합 badge */}
+          {gunghapPartner && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#F7F7FA", border: "1px solid #E2E2E8", borderRadius: 20, padding: "4px 10px 4px 12px" }}>
+                <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, fontWeight: 500, color: "#6B6B78" }}>
+                  {form.name || "나"} ✕ {gunghapPartner.name}
+                </span>
+                <button onClick={() => { setGunghapPartner(null); setGunghapCtx(""); }}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "#9898A4", padding: 0, display: "flex", alignItems: "center" }}
+                  title="궁합 모드 해제">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: "#9898A4" }}>궁합 분석 중</span>
+            </div>
+          )}
           <div style={{ display: "flex", gap: 10, background: "#FFFFFF", border: "1px solid #C8C8D0", borderRadius: "8px", padding: "10px 12px", transition: "border-color 0.15s" }}
             onFocus={() => { }} >
             <input style={{
               flex: 1, background: "transparent", border: "none", outline: "none",
               fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, color: "#111116",
               lineHeight: 1.5,
-            }} placeholder="무엇이 궁금하세요?"
+            }} placeholder={gunghapPartner ? `${form.name || "나"} & ${gunghapPartner.name} 궁합에 대해 물어보세요` : "무엇이 궁금하세요?"}
               value={input} onChange={e => setInput(e.target.value)}
               onCompositionStart={() => { composingRef.current = true; }}
               onCompositionEnd={() => { composingRef.current = false; }}
