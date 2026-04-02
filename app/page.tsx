@@ -58,6 +58,10 @@ export default function Page() {
   const [editingPersonId, setEditingPersonId] = useState<string | null>(null);
   const [personForm, setPersonForm] = useState<PartnerForm>({ name: "", year: "", month: "", day: "", hour: -1, gender: "M" });
   const [activePersonId, setActivePersonId] = useState<string | null>(null);
+  const [gunghapPending, setGunghapPending] = useState<string | null>(null); // pending 궁합 message
+  const [showGunghapPicker, setShowGunghapPicker] = useState(false);
+  const [gunghapAddMode, setGunghapAddMode] = useState(false); // adding new person inline for 궁합
+  const [gunghapForm, setGunghapForm] = useState<PartnerForm>({ name: "", year: "", month: "", day: "", hour: -1, gender: "M" });
   const abortRef = useRef<AbortController | null>(null);
 
   // ── Load chat history list ──
@@ -364,9 +368,89 @@ export default function Page() {
     if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
   }
 
+  const GUNGHAP_KEYWORDS = ["궁합", "잘 맞", "잘맞", "상성", "케미", "커플", "연인", "배우자", "짝", "파트너", "남친", "여친", "남자친구", "여자친구", "남편", "아내", "와의 관계", "과의 관계"];
+
+  function isGunghapQuery(text: string) {
+    return GUNGHAP_KEYWORDS.some(k => text.includes(k));
+  }
+
+  function buildPartnerContext(person: any): string {
+    try {
+      const r = calcAll(person.year, person.month, person.day, person.hour ?? 11, person.gender);
+      return sajuToPromptContext(r, person.gender, person.year, person.month, person.day).replace("사주 정보", `상대방(${person.name}) 사주 정보`);
+    } catch { return ""; }
+  }
+
+  async function sendWithGunghap(person: any) {
+    const txt = gunghapPending;
+    if (!txt) return;
+    setShowGunghapPicker(false);
+    setGunghapPending(null);
+    setGunghapAddMode(false);
+    const partnerCtx = buildPartnerContext(person);
+    const combinedCtx = sajuCtx + "\n\n" + partnerCtx + "\n\n[궁합 분석 요청] 위 두 사람의 사주를 비교하여 궁합을 분석해주세요.";
+    // Send with combined context
+    const userMsg: Message = { role: "user", content: txt };
+    const newMsgs = [...messages, userMsg];
+    setMessages(newMsgs); setInput(""); setLoading(true);
+    const controller = new AbortController();
+    abortRef.current = controller;
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: newMsgs, sajuContext: combinedCtx }),
+        signal: controller.signal,
+      });
+      if (!res.ok) throw new Error();
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let aiText = "";
+      setMessages(prev => [...prev, { role: "assistant", content: "" }]);
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        aiText += decoder.decode(value, { stream: true });
+        setMessages(prev => { const u = [...prev]; u[u.length - 1] = { role: "assistant", content: aiText }; return u; });
+      }
+      if (sessionId && user && supabase) {
+        const finalMessages = [...newMsgs, { role: "assistant" as const, content: aiText }];
+        await supabase.from("chat_sessions").update({ messages: finalMessages, updated_at: new Date().toISOString() }).eq("id", sessionId);
+        loadChatHistory(user.id, supabase);
+      }
+    } catch (e: any) {
+      if (e?.name !== "AbortError") {
+        setMessages(prev => [...prev, { role: "assistant", content: "오류가 발생했습니다. 다시 시도해주세요." }]);
+      }
+    } finally { setLoading(false); abortRef.current = null; }
+  }
+
+  async function saveGunghapPersonAndSend() {
+    const f = gunghapForm;
+    if (!f.name || !f.year || !f.month || !f.day || !supabase || !user) return;
+    const res = await supabase.from("people").insert({
+      user_id: user.id, name: f.name, year: +f.year, month: +f.month,
+      day: +f.day, hour: +f.hour, gender: f.gender,
+    });
+    if (res.error) { alert("저장 실패: " + res.error.message); return; }
+    await loadPeople();
+    const person = { name: f.name, year: +f.year, month: +f.month, day: +f.day, hour: +f.hour, gender: f.gender };
+    setGunghapForm({ name: "", year: "", month: "", day: "", hour: -1, gender: "M" });
+    sendWithGunghap(person);
+  }
+
   async function send(override?: string) {
     const txt = override ?? input;
     if (!txt.trim() || loading) return;
+    // Check for 궁합 keywords
+    if (isGunghapQuery(txt)) {
+      setGunghapPending(txt);
+      setInput("");
+      setShowGunghapPicker(true);
+      setGunghapAddMode(false);
+      loadPeople();
+      return;
+    }
     const userMsg: Message = { role: "user", content: txt };
     const newMsgs = [...messages, userMsg];
     setMessages(newMsgs); setInput(""); setLoading(true);
@@ -732,6 +816,84 @@ export default function Page() {
                 {q}
               </button>
             ))}
+          </div>
+        )}
+
+        {/* 궁합 상대 선택 */}
+        {showGunghapPicker && (
+          <div className="fade-in" style={{ padding: "12px 28px 0", flexShrink: 0 }}>
+            <div style={{ background: "#FFFFFF", border: "1px solid #E2E2E8", borderRadius: 10, padding: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, fontWeight: 600, letterSpacing: "0.16em", textTransform: "uppercase", color: "#9898A4", margin: 0 }}>궁합 상대 선택</p>
+                <button onClick={() => { setShowGunghapPicker(false); setGunghapPending(null); setGunghapAddMode(false); }}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "#9898A4", padding: 2 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+
+              {!gunghapAddMode ? (
+                <>
+                  {people.length > 0 && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 10 }}>
+                      {people.map((p: any) => {
+                        let saju: Saju | null = null;
+                        try { saju = calcSaju(p.year, p.month, p.day, p.hour ?? -1); } catch {}
+                        const dp = saju?.dp;
+                        return (
+                          <button key={p.id} onClick={() => sendWithGunghap(p)}
+                            style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "#F7F7FA", border: "1px solid #E2E2E8", borderRadius: 8, cursor: "pointer", textAlign: "left", transition: "all 0.12s" }}
+                            onMouseEnter={e => { e.currentTarget.style.borderColor = "#9898A4"; e.currentTarget.style.background = "#EFEFF2"; }}
+                            onMouseLeave={e => { e.currentTarget.style.borderColor = "#E2E2E8"; e.currentTarget.style.background = "#F7F7FA"; }}>
+                            <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#EFEFF2", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, fontWeight: 600, color: "#2E2E38" }}>{(p.name || "?").slice(0,1)}</span>
+                            </div>
+                            <div>
+                              <p style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 500, color: "#111116", margin: 0 }}>{p.name}</p>
+                              <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: "#6B6B78", margin: 0 }}>
+                                {p.year}년 {p.month}월 {p.day}일 · {dp ? `${CG[dp.cg]}${JJ[dp.jj]}` : ""} · {p.gender === "F" ? "여" : "남"}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <button onClick={() => setGunghapAddMode(true)}
+                    style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "10px 0", background: "transparent", border: "1px dashed #C8C8D0", borderRadius: 8, cursor: "pointer", fontFamily: "'Geist Mono', monospace", fontSize: 11, fontWeight: 500, color: "#6B6B78", transition: "all 0.12s" }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = "#9898A4"; e.currentTarget.style.color = "#2E2E38"; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = "#C8C8D0"; e.currentTarget.style.color = "#6B6B78"; }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    새 프로필 추가
+                  </button>
+                </>
+              ) : (
+                <div>
+                  <input style={{ width: "100%", background: "#F7F7FA", border: "1px solid #C8C8D0", borderRadius: 4, padding: "8px 12px", fontFamily: "'Geist Mono', monospace", fontSize: 12, color: "#111116", outline: "none", marginBottom: 6 }}
+                    type="text" placeholder="이름" value={gunghapForm.name} onChange={e => setGunghapForm(p => ({ ...p, name: e.target.value }))} />
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 6 }}>
+                    {([["년", "year", "1990"], ["월", "month", "3"], ["일", "day", "15"]] as const).map(([l, k, ph]) => (
+                      <input key={k} style={{ background: "#F7F7FA", border: "1px solid #C8C8D0", borderRadius: 4, padding: "8px 10px", fontFamily: "'Geist Mono', monospace", fontSize: 12, color: "#111116", outline: "none" }}
+                        type="number" placeholder={`${l} ${ph}`} value={(gunghapForm as any)[k]} onChange={e => setGunghapForm(p => ({ ...p, [k]: e.target.value }))} />
+                    ))}
+                  </div>
+                  <select style={{ width: "100%", background: "#F7F7FA", border: "1px solid #C8C8D0", borderRadius: 4, padding: "8px 10px", fontFamily: "'Geist Mono', monospace", fontSize: 12, color: "#111116", outline: "none", marginBottom: 6 }}
+                    value={gunghapForm.hour} onChange={e => setGunghapForm(p => ({ ...p, hour: +e.target.value }))}>
+                    {HOURS.map((o: any) => <option key={o.v} value={o.v}>{o.l}</option>)}
+                  </select>
+                  <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                    {([["F", "여성"], ["M", "남성"]] as const).map(([v, l]) => (
+                      <button key={v} onClick={() => setGunghapForm(p => ({ ...p, gender: v }))} style={{ flex: 1, padding: "6px 0", background: gunghapForm.gender === v ? "rgba(46,46,56,0.06)" : "#fff", border: `1px solid ${gunghapForm.gender === v ? "rgba(46,46,56,0.25)" : "#C8C8D0"}`, borderRadius: 4, cursor: "pointer", fontFamily: "'Geist Mono', monospace", fontSize: 10, fontWeight: 600, color: gunghapForm.gender === v ? "#2E2E38" : "#6B6B78" }}>{l}</button>
+                    ))}
+                  </div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button onClick={() => setGunghapAddMode(false)}
+                      style={{ flex: 1, padding: 8, background: "#FAFAFA", border: "1px solid #C8C8D0", borderRadius: 4, cursor: "pointer", fontFamily: "'Geist Mono', monospace", fontSize: 11, fontWeight: 600, color: "#6B6B78" }}>뒤로</button>
+                    <button onClick={saveGunghapPersonAndSend}
+                      style={{ flex: 1, padding: 8, background: "#2E2E38", border: "none", borderRadius: 4, cursor: "pointer", fontFamily: "'Geist Mono', monospace", fontSize: 11, fontWeight: 600, color: "#fff" }}>저장 & 궁합 분석</button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
