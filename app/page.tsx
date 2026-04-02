@@ -254,10 +254,11 @@ export default function Page() {
     setPartnerSaju(ps);
     setShowPartner(false);
     // Save to people table
-    await supabase.from("people").insert({
+    const { error } = await supabase.from("people").insert({
       user_id: user.id, name: partner.name, year: +partner.year, month: +partner.month,
       day: +partner.day, hour: +partner.hour, gender: partner.gender,
     });
+    if (error) { console.error("Insert people error:", error); alert("저장 실패: " + error.message); }
     await loadPeople();
     setPartner({ name: "", year: "", month: "", day: "", hour: -1, gender: "M" });
   }
