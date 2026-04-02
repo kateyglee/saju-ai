@@ -823,7 +823,22 @@ export default function Page() {
                         <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11, color: "#6B6B78", margin: 0 }}>{form.year}년 {form.month}월 {form.day}일 · {form.gender === "F" ? "여성" : "남성"}</p>
                       </div>
                     </div>
-                    <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: "#9898A4", background: "#EFEFF2", padding: "3px 8px", borderRadius: 4 }}>기본</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+                      {activePersonId && (() => { const ap = people.find((p: any) => p.id === activePersonId); return ap ? (<>
+                        <button onClick={() => editPerson(ap)} title="수정"
+                          style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer", borderRadius: 4, color: "#9898A4" }}
+                          onMouseEnter={e => (e.currentTarget.style.background = "#EFEFF2")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                        </button>
+                        <button onClick={async () => { await deletePerson(ap.id); setActivePersonId(null); if (user) await loadProfile(user.id); }} title="삭제"
+                          style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer", borderRadius: 4, color: "#9898A4" }}
+                          onMouseEnter={e => { e.currentTarget.style.background = "#FFF5F5"; e.currentTarget.style.color = "#E04040"; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#9898A4"; }}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4h8v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+                        </button>
+                      </>) : null; })()}
+                      <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: "#9898A4", background: "#EFEFF2", padding: "3px 8px", borderRadius: 4, marginLeft: 4 }}>기본</span>
+                    </div>
                   </div>
                 </div>
               )}
