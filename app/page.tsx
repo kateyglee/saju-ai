@@ -448,8 +448,8 @@ export default function Page() {
   async function send(override?: string) {
     const txt = override ?? input;
     if (!txt.trim() || loading) return;
-    // Check for 궁합 keywords
-    if (isGunghapQuery(txt)) {
+    // Check for 궁합 keywords — skip if already in 궁합 mode
+    if (!gunghapPartner && isGunghapQuery(txt)) {
       setGunghapPending(txt);
       setInput("");
       setShowGunghapPicker(true);
