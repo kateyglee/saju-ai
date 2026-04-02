@@ -907,7 +907,7 @@ export default function Page() {
               lineHeight: 1.5,
             }} placeholder="무엇이 궁금하세요?"
               value={input} onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()} />
+              onKeyDown={e => e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && send()} />
             <button onClick={() => loading ? stopGeneration() : send()} disabled={!loading && !input.trim()} style={{
               width: 32, height: 32, flexShrink: 0,
               background: loading ? "#2E2E38" : (!input.trim() ? "#EFEFF2" : "linear-gradient(135deg, #F2F2F5, #C8C8D0, #9898A8)"),
