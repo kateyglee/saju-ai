@@ -6,7 +6,7 @@ import type { SajuResult, DaeunItem, Saju } from "@/lib/saju";
 
 interface Message { role: "user" | "assistant"; content: string; }
 interface Form { name: string; year: string; month: string; day: string; hour: number; gender: string; }
-interface PartnerForm { year: string; month: string; day: string; hour: number; gender: string; }
+interface PartnerForm { name: string; year: string; month: string; day: string; hour: number; gender: string; }
 
 // ── 인라인 마크다운 렌더 ──────────────────────────────────────────────────────
 function renderInline(text: string) {
@@ -45,7 +45,7 @@ export default function Page() {
   const [input, setInput]         = useState("");
   const [loading, setLoading]     = useState(false);
   const [showPartner, setShowPartner] = useState(false);
-  const [partner, setPartner]     = useState<PartnerForm>({ year: "", month: "", day: "", hour: -1, gender: "M" });
+  const [partner, setPartner]     = useState<PartnerForm>({ name: "", year: "", month: "", day: "", hour: -1, gender: "M" });
   const [partnerSaju, setPartnerSaju] = useState<Saju | null>(null);
   const [sideCollapsed, setSideCollapsed] = useState(false);
   const [sideSecondary, setSideSecondary] = useState(false);
@@ -53,6 +53,10 @@ export default function Page() {
   const [supabase, setSupabase] = useState<any>(null);
   const [chatHistory, setChatHistory] = useState<any[]>([]);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [showPeopleModal, setShowPeopleModal] = useState(false);
+  const [people, setPeople] = useState<any[]>([]);
+  const [editingPersonId, setEditingPersonId] = useState<string | null>(null);
+  const [personForm, setPersonForm] = useState<PartnerForm>({ name: "", year: "", month: "", day: "", hour: -1, gender: "M" });
 
   // ── Load chat history list ──
   async function loadChatHistory(userId: string, sb: any) {
@@ -153,6 +157,9 @@ export default function Page() {
       if (u) {
         try {
           await loadProfile(u.id, sb);
+          // Load people list
+          const { data: ppl } = await sb.from("people").select("*").eq("user_id", u.id).order("created_at", { ascending: false });
+          setPeople(ppl || []);
           console.log("[saju] loadProfile done, step will be chat or form");
         } catch (e) {
           console.log("[saju] loadProfile error:", e);
@@ -240,15 +247,68 @@ export default function Page() {
     }
   }
 
-  function analyzePartner() {
-    if (!partner.year || !partner.month || !partner.day) return;
+  async function addPersonFromPartner() {
+    if (!partner.name || !partner.year || !partner.month || !partner.day) return;
+    if (!supabase || !user) return;
     const ps = calcSaju(+partner.year, +partner.month, +partner.day, +partner.hour);
     setPartnerSaju(ps);
     setShowPartner(false);
-    const pDp = ps.dp;
-    const compatCtx = `\n\n[궁합 상대방]\n생년월일: ${partner.year}년 ${partner.month}월 ${partner.day}일 / 성별: ${partner.gender === "F" ? "여성" : "남성"}\n사주: ${CG[ps.yp.cg]}${JJ[ps.yp.jj]} ${CG[ps.mp.cg]}${JJ[ps.mp.jj]} ${CG[pDp.cg]}${JJ[pDp.jj]}\n일간: ${CG[pDp.cg]}${JJ[pDp.jj]}(${CG_HJ[pDp.cg]}${JJ_HJ[pDp.jj]})`;
-    setSajuCtx(prev => prev + compatCtx);
-    setInput(`${partner.year}년 ${partner.month}월 ${partner.day}일생 ${partner.gender === "F" ? "여성" : "남성"}(${CG[pDp.cg]}${JJ[pDp.jj]} 일간)과의 궁합을 분석해주세요.`);
+    // Save to people table
+    await supabase.from("people").insert({
+      user_id: user.id, name: partner.name, year: +partner.year, month: +partner.month,
+      day: +partner.day, hour: +partner.hour, gender: partner.gender,
+    });
+    await loadPeople();
+    setPartner({ name: "", year: "", month: "", day: "", hour: -1, gender: "M" });
+  }
+
+  async function loadPeople() {
+    if (!supabase || !user) return;
+    const { data } = await supabase.from("people").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
+    setPeople(data || []);
+  }
+
+  async function savePerson() {
+    if (!supabase || !user || !personForm.name || !personForm.year || !personForm.month || !personForm.day) return;
+    if (editingPersonId) {
+      await supabase.from("people").update({
+        name: personForm.name, year: +personForm.year, month: +personForm.month,
+        day: +personForm.day, hour: +personForm.hour, gender: personForm.gender,
+      }).eq("id", editingPersonId);
+    } else {
+      await supabase.from("people").insert({
+        user_id: user.id, name: personForm.name, year: +personForm.year, month: +personForm.month,
+        day: +personForm.day, hour: +personForm.hour, gender: personForm.gender,
+      });
+    }
+    await loadPeople();
+    setPersonForm({ name: "", year: "", month: "", day: "", hour: -1, gender: "M" });
+    setEditingPersonId(null);
+  }
+
+  async function deletePerson(id: string) {
+    if (!supabase || !user) return;
+    await supabase.from("people").delete().eq("id", id);
+    setPeople(prev => prev.filter(p => p.id !== id));
+  }
+
+  async function setAsDefault(person: any) {
+    if (!supabase || !user) return;
+    await supabase.from("profiles").upsert({
+      id: user.id, name: person.name, year: person.year, month: person.month,
+      day: person.day, hour: person.hour, gender: person.gender, updated_at: new Date().toISOString(),
+    }, { onConflict: "id" });
+    // Reload with new profile
+    setForm({ name: person.name, year: String(person.year), month: String(person.month), day: String(person.day), hour: person.hour, gender: person.gender });
+    const r = calcAll(person.year, person.month, person.day, person.hour ?? 11, person.gender);
+    const ctx = sajuToPromptContext(r, person.gender, person.year, person.month, person.day);
+    setResult(r); setSajuCtx(ctx);
+    setShowPeopleModal(false);
+  }
+
+  function editPerson(p: any) {
+    setPersonForm({ name: p.name, year: String(p.year), month: String(p.month), day: String(p.day), hour: p.hour, gender: p.gender });
+    setEditingPersonId(p.id);
   }
 
   async function startNewChat() {
@@ -435,19 +495,6 @@ export default function Page() {
         {!sideCollapsed && (
           <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
 
-            {/* 새 채팅 + 검색 */}
-            <div style={{ padding: "6px 10px", flexShrink: 0, display: "flex", flexDirection: "column", gap: 1 }}>
-              {[{ icon: "M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z", label: "새 채팅", action: () => startNewChat() },
-                { icon: "M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z", label: "검색", action: () => {} }
-              ].map(item => (
-                <button key={item.label} onClick={item.action} style={{ width: "100%", display: "flex", alignItems: "center", height: 32, padding: "0 10px", borderRadius: 6, cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, fontWeight: 400, color: "#3A3A44", background: "transparent", border: "none", gap: 10, transition: "background 0.12s" }}
-                  onMouseEnter={e => (e.currentTarget.style.background = "#F7F7FA")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B6B78" strokeWidth="2"><path d={item.icon}/></svg>
-                  <span>{item.label}</span>
-                </button>
-              ))}
-            </div>
-
             {/* 내 사주 */}
             {result && (<>
               <div style={{ padding: "8px 20px 4px", flexShrink: 0 }}>
@@ -492,38 +539,20 @@ export default function Page() {
                 </button>
               </div>
 
-              {/* 궁합 상대방 입력 패널 */}
-              {showPartner && (
-                <div style={{ padding: "8px 10px 0", flexShrink: 0 }} className="fade-in">
-                  <div style={{ background: "#F7F7FA", border: "1px solid #E2E2E8", borderRadius: 8, padding: "14px 14px 12px" }}>
-                    <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.20em", textTransform: "uppercase", color: "#9898A4", marginBottom: 12 }}>상대방 정보</p>
-                    {([["년", "year", "1988"], ["월", "month", "3"], ["일", "day", "15"]] as const).map(([l, k, ph]) => (
-                      <div key={k} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                        <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: "#9898A4", width: 14 }}>{l.toUpperCase()}</span>
-                        <input style={{ flex: 1, background: "#FFFFFF", border: "1px solid #C8C8D0", borderRadius: 4, padding: "6px 10px", fontFamily: "'Geist Mono', monospace", fontSize: 12, color: "#111116", outline: "none" }}
-                          type="number" placeholder={ph} value={(partner as any)[k]}
-                          onChange={e => updP(k, e.target.value)}
-                          onFocus={e => (e.currentTarget.style.borderColor = "rgba(46,46,56,0.25)")}
-                          onBlur={e => (e.currentTarget.style.borderColor = "#C8C8D0")} />
-                      </div>
-                    ))}
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                      <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: "#9898A4", width: 14 }}>시</span>
-                      <select style={{ flex: 1, background: "#FFFFFF", border: "1px solid #C8C8D0", borderRadius: 4, padding: "6px 10px", fontFamily: "'Geist Mono', monospace", fontSize: 12, color: "#111116", outline: "none" }}
-                        value={partner.hour} onChange={e => updP("hour", +e.target.value)}>
-                        {HOURS.map((o: any) => <option key={o.v} value={o.v}>{o.l}</option>)}
-                      </select>
-                    </div>
-                    <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-                      {([["F", "여성"], ["M", "남성"]] as const).map(([v, l]) => (
-                        <button key={v} onClick={() => updP("gender", v)} style={{ flex: 1, padding: "6px 0", background: partner.gender === v ? "rgba(46,46,56,0.06)" : "transparent", border: `1px solid ${partner.gender === v ? "rgba(46,46,56,0.25)" : "#C8C8D0"}`, borderRadius: 4, cursor: "pointer", fontFamily: "'Geist Mono', monospace", fontSize: 10, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: partner.gender === v ? "#2E2E38" : "#6B6B78" }}>{l}</button>
-                      ))}
-                    </div>
-                    <button onClick={analyzePartner} style={{ width: "100%", padding: 9, background: "linear-gradient(135deg, #F2F2F5, #C8C8D0, #9898A8)", border: "none", borderRadius: 4, cursor: "pointer", fontFamily: "'Geist Mono', monospace", fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#FFFFFF" }}>사주 정보 추가</button>
-                  </div>
-                </div>
-              )}
             </>)}
+
+            {/* 새 채팅 + 검색 */}
+            <div style={{ padding: "6px 10px", flexShrink: 0, display: "flex", flexDirection: "column", gap: 1 }}>
+              {[{ icon: "M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z", label: "새 채팅", action: () => startNewChat() },
+                { icon: "M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z", label: "검색", action: () => {} }
+              ].map(item => (
+                <button key={item.label} onClick={item.action} style={{ width: "100%", display: "flex", alignItems: "center", height: 32, padding: "0 10px", borderRadius: 6, cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, fontWeight: 400, color: "#3A3A44", background: "transparent", border: "none", gap: 10, transition: "background 0.12s" }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "#F7F7FA")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B6B78" strokeWidth="2"><path d={item.icon}/></svg>
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </div>
 
             {/* 구분선 */}
             <div style={{ margin: "10px 10px 0", borderTop: "0.5px solid #E2E2E8", flexShrink: 0 }} />
@@ -594,7 +623,7 @@ export default function Page() {
                   onMouseEnter={e => (e.currentTarget.style.background = "#EFEFF2")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4"/></svg>
                 </button>
-                <button title="사람들" onClick={() => window.location.href = "/people"}
+                <button title="사람들" onClick={() => { loadPeople(); setShowPeopleModal(true); }}
                   style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer", borderRadius: 6, color: "#9898A4" }}
                   onMouseEnter={e => (e.currentTarget.style.background = "#EFEFF2")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -699,6 +728,183 @@ export default function Page() {
           </div>
         </div>
       </main>
+
+      {/* ── 사주 정보 추가 모달 ── */}
+      {showPartner && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+          onClick={() => setShowPartner(false)}>
+          <div style={{ background: "#FFFFFF", borderRadius: 12, padding: "28px 24px", width: "100%", maxWidth: 400, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", animation: "fadeIn 0.15s ease" }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, fontWeight: 500, letterSpacing: "0.20em", textTransform: "uppercase", color: "#9898A4", margin: 0 }}>사주 정보 추가</p>
+              <button onClick={() => setShowPartner(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#9898A4", padding: 4 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.14em", textTransform: "uppercase", color: "#9898A4", display: "block", marginBottom: 4 }}>이름</label>
+              <input style={{ width: "100%", background: "#FAFAFA", border: "1px solid #C8C8D0", borderRadius: 4, padding: "10px 14px", fontFamily: "'Geist Mono', monospace", fontSize: 13, color: "#111116", outline: "none" }}
+                type="text" placeholder="이름" value={partner.name} onChange={e => updP("name", e.target.value)}
+                onFocus={e => (e.currentTarget.style.borderColor = "rgba(46,46,56,0.25)")} onBlur={e => (e.currentTarget.style.borderColor = "#C8C8D0")} />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 12 }}>
+              {([["생년", "year", "1990"], ["생월", "month", "3"], ["생일", "day", "15"]] as const).map(([l, k, ph]) => (
+                <div key={k}>
+                  <label style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.14em", textTransform: "uppercase", color: "#9898A4", display: "block", marginBottom: 4 }}>{l}</label>
+                  <input style={{ width: "100%", background: "#FAFAFA", border: "1px solid #C8C8D0", borderRadius: 4, padding: "10px 14px", fontFamily: "'Geist Mono', monospace", fontSize: 13, color: "#111116", outline: "none" }}
+                    type="number" placeholder={ph} value={(partner as any)[k]} onChange={e => updP(k, e.target.value)}
+                    onFocus={e => (e.currentTarget.style.borderColor = "rgba(46,46,56,0.25)")} onBlur={e => (e.currentTarget.style.borderColor = "#C8C8D0")} />
+                </div>
+              ))}
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.14em", textTransform: "uppercase", color: "#9898A4", display: "block", marginBottom: 4 }}>생시</label>
+              <select style={{ width: "100%", background: "#FAFAFA", border: "1px solid #C8C8D0", borderRadius: 4, padding: "10px 14px", fontFamily: "'Geist Mono', monospace", fontSize: 13, color: "#111116", outline: "none" }}
+                value={partner.hour} onChange={e => updP("hour", +e.target.value)}>
+                {HOURS.map((o: any) => <option key={o.v} value={o.v}>{o.l}</option>)}
+              </select>
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.14em", textTransform: "uppercase", color: "#9898A4", display: "block", marginBottom: 4 }}>성별</label>
+              <div style={{ display: "flex", gap: 8 }}>
+                {([["F", "여성"], ["M", "남성"]] as const).map(([v, l]) => (
+                  <button key={v} onClick={() => updP("gender", v)} style={{ flex: 1, padding: "10px 0", background: partner.gender === v ? "rgba(46,46,56,0.06)" : "#FAFAFA", border: `1px solid ${partner.gender === v ? "rgba(46,46,56,0.25)" : "#C8C8D0"}`, borderRadius: 4, cursor: "pointer", fontFamily: "'Geist Mono', monospace", fontSize: 12, fontWeight: 600, color: partner.gender === v ? "#2E2E38" : "#6B6B78" }}>{l}</button>
+                ))}
+              </div>
+            </div>
+            <button onClick={addPersonFromPartner} style={{ width: "100%", padding: "12px 0", background: "#2E2E38", border: "none", borderRadius: 6, cursor: "pointer", fontFamily: "'Geist Mono', monospace", fontSize: 12, fontWeight: 600, letterSpacing: "0.08em", color: "#fff" }}
+              onMouseEnter={e => (e.currentTarget.style.background = "#1A1A24")} onMouseLeave={e => (e.currentTarget.style.background = "#2E2E38")}>
+              사주 정보 추가
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── 사람들 모달 ── */}
+      {showPeopleModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+          onClick={() => { setShowPeopleModal(false); setEditingPersonId(null); }}>
+          <div style={{ background: "#FFFFFF", borderRadius: 12, width: "100%", maxWidth: 520, maxHeight: "80vh", boxShadow: "0 8px 24px rgba(0,0,0,0.15)", animation: "fadeIn 0.15s ease", display: "flex", flexDirection: "column" }}
+            onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #E2E2E8", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <p style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 16, fontWeight: 600, color: "#111116", margin: 0 }}>사람들</p>
+                <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: "#9898A4" }}>{people.length}명</span>
+              </div>
+              <button onClick={() => { setShowPeopleModal(false); setEditingPersonId(null); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#9898A4", padding: 4 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            {/* Body */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "16px 24px" }}>
+              {/* My profile */}
+              {form.year && (
+                <div style={{ marginBottom: 16 }}>
+                  <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.20em", textTransform: "uppercase", color: "#9898A4", marginBottom: 8 }}>대표 사주</p>
+                  <div style={{ background: "#F7F7FA", border: "1px solid #E2E2E8", borderRadius: 8, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#2E2E38", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11, fontWeight: 600, color: "#fff" }}>{(form.name || "나").slice(0,1)}</span>
+                      </div>
+                      <div>
+                        <p style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, fontWeight: 600, color: "#111116", margin: 0 }}>{form.name || "내 사주"}</p>
+                        <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11, color: "#6B6B78", margin: 0 }}>{form.year}년 {form.month}월 {form.day}일 · {form.gender === "F" ? "여성" : "남성"}</p>
+                      </div>
+                    </div>
+                    <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: "#9898A4", background: "#EFEFF2", padding: "3px 8px", borderRadius: 4 }}>기본</span>
+                  </div>
+                </div>
+              )}
+              {/* Add/edit form */}
+              {editingPersonId !== null && (
+                <div style={{ background: "#F7F7FA", border: "1px solid #E2E2E8", borderRadius: 8, padding: 16, marginBottom: 16 }}>
+                  <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.20em", textTransform: "uppercase", color: "#9898A4", marginBottom: 12 }}>
+                    {editingPersonId ? "정보 수정" : "새 사람 추가"}
+                  </p>
+                  <input style={{ width: "100%", background: "#FFFFFF", border: "1px solid #C8C8D0", borderRadius: 4, padding: "8px 12px", fontFamily: "'Geist Mono', monospace", fontSize: 12, color: "#111116", outline: "none", marginBottom: 8 }}
+                    type="text" placeholder="이름" value={personForm.name} onChange={e => setPersonForm(p => ({ ...p, name: e.target.value }))} />
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6, marginBottom: 8 }}>
+                    {([["년", "year", "1990"], ["월", "month", "3"], ["일", "day", "15"]] as const).map(([l, k, ph]) => (
+                      <input key={k} style={{ background: "#FFFFFF", border: "1px solid #C8C8D0", borderRadius: 4, padding: "8px 10px", fontFamily: "'Geist Mono', monospace", fontSize: 12, color: "#111116", outline: "none" }}
+                        type="number" placeholder={`${l} ${ph}`} value={(personForm as any)[k]} onChange={e => setPersonForm(p => ({ ...p, [k]: e.target.value }))} />
+                    ))}
+                    <select style={{ background: "#FFFFFF", border: "1px solid #C8C8D0", borderRadius: 4, padding: "8px 6px", fontFamily: "'Geist Mono', monospace", fontSize: 11, color: "#111116", outline: "none" }}
+                      value={personForm.hour} onChange={e => setPersonForm(p => ({ ...p, hour: +e.target.value }))}>
+                      {HOURS.map((o: any) => <option key={o.v} value={o.v}>{o.l}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                    {([["F", "여성"], ["M", "남성"]] as const).map(([v, l]) => (
+                      <button key={v} onClick={() => setPersonForm(p => ({ ...p, gender: v }))} style={{ flex: 1, padding: "6px 0", background: personForm.gender === v ? "rgba(46,46,56,0.06)" : "#fff", border: `1px solid ${personForm.gender === v ? "rgba(46,46,56,0.25)" : "#C8C8D0"}`, borderRadius: 4, cursor: "pointer", fontFamily: "'Geist Mono', monospace", fontSize: 10, fontWeight: 600, color: personForm.gender === v ? "#2E2E38" : "#6B6B78" }}>{l}</button>
+                    ))}
+                  </div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button onClick={() => { setEditingPersonId(null); setPersonForm({ name: "", year: "", month: "", day: "", hour: -1, gender: "M" }); }}
+                      style={{ flex: 1, padding: 8, background: "#FAFAFA", border: "1px solid #C8C8D0", borderRadius: 4, cursor: "pointer", fontFamily: "'Geist Mono', monospace", fontSize: 11, fontWeight: 600, color: "#6B6B78" }}>취소</button>
+                    <button onClick={savePerson}
+                      style={{ flex: 1, padding: 8, background: "#2E2E38", border: "none", borderRadius: 4, cursor: "pointer", fontFamily: "'Geist Mono', monospace", fontSize: 11, fontWeight: 600, color: "#fff" }}>저장</button>
+                  </div>
+                </div>
+              )}
+              {/* People list */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.20em", textTransform: "uppercase", color: "#9898A4", margin: 0 }}>저장된 사람들</p>
+                {editingPersonId === null && (
+                  <button onClick={() => { setPersonForm({ name: "", year: "", month: "", day: "", hour: -1, gender: "M" }); setEditingPersonId("new"); }}
+                    style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "'Geist Mono', monospace", fontSize: 10, color: "#2E2E38", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    추가
+                  </button>
+                )}
+              </div>
+              {people.length === 0 ? (
+                <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11, color: "#9898A4", textAlign: "center", padding: "20px 0" }}>아직 추가된 사람이 없습니다</p>
+              ) : (
+                people.map((p: any) => {
+                  let saju: Saju | null = null;
+                  try { saju = calcSaju(p.year, p.month, p.day, p.hour ?? -1); } catch {}
+                  const dp = saju?.dp;
+                  return (
+                    <div key={p.id} style={{ background: "#FFFFFF", border: "1px solid #E2E2E8", borderRadius: 8, padding: "12px 16px", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#EFEFF2", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, fontWeight: 600, color: "#2E2E38" }}>{(p.name || "?").slice(0,1)}</span>
+                        </div>
+                        <div>
+                          <p style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 500, color: "#111116", margin: 0 }}>{p.name}</p>
+                          <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: "#6B6B78", margin: 0 }}>
+                            {p.year}년 {p.month}월 {p.day}일 · {dp ? `${CG[dp.cg]}${JJ[dp.jj]}` : ""} · {p.gender === "F" ? "여" : "남"}
+                          </p>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 2 }}>
+                        <button onClick={() => setAsDefault(p)} title="대표사주로 설정"
+                          style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer", borderRadius: 4, color: "#9898A4" }}
+                          onMouseEnter={e => { e.currentTarget.style.background = "#F7F7FA"; e.currentTarget.style.color = "#2E2E38"; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#9898A4"; }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                        </button>
+                        <button onClick={() => editPerson(p)} title="수정"
+                          style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer", borderRadius: 4, color: "#9898A4" }}
+                          onMouseEnter={e => (e.currentTarget.style.background = "#F7F7FA")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                        </button>
+                        <button onClick={() => deletePerson(p.id)} title="삭제"
+                          style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer", borderRadius: 4, color: "#9898A4" }}
+                          onMouseEnter={e => { e.currentTarget.style.background = "#FFF5F5"; e.currentTarget.style.color = "#E04040"; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#9898A4"; }}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4h8v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
