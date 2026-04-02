@@ -27,7 +27,7 @@ function renderContent(content: string, isUser: boolean) {
     if (line.match(/^\d+\. /)) return <div key={j} style={{ display: "flex", gap: 8, margin: "4px 0" }}><span style={{ color: "#9898A8", flexShrink: 0, fontFamily: "'Geist Mono', monospace", fontSize: 11, minWidth: 16 }}>{line.match(/^\d+/)?.[0]}.</span><span style={{ color: "#3A3A44" }}>{renderInline(line.replace(/^\d+\. /, ""))}</span></div>;
     if (line === "---" || line === "***") return <hr key={j} style={{ border: "none", borderTop: "1px solid #E2E2E8", margin: "12px 0" }} />;
     if (line === "") return <div key={j} style={{ height: 8 }} />;
-    return <div key={j} style={{ color: isUser ? "rgba(255,255,255,0.92)" : "#3A3A44", lineHeight: 1.7 }}>{renderInline(line)}</div>;
+    return <div key={j} style={{ color: isUser ? "#2E2E38" : "#3A3A44", lineHeight: 1.7 }}>{renderInline(line)}</div>;
   });
 }
 
