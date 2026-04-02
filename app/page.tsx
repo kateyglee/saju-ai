@@ -276,28 +276,29 @@ export default function Page() {
       console.log("[saju] savePerson early return — missing fields", { supabase: !!supabase, user: !!user, name: personForm.name, year: personForm.year, month: personForm.month, day: personForm.day });
       return;
     }
-    try {
-      let res: any;
-      if (editingPersonId && editingPersonId !== "new") {
-        res = await supabase.from("people").update({
-          name: personForm.name, year: +personForm.year, month: +personForm.month,
-          day: +personForm.day, hour: +personForm.hour, gender: personForm.gender,
-        }).eq("id", editingPersonId);
-      } else {
-        res = await supabase.from("people").insert({
-          user_id: user.id, name: personForm.name, year: +personForm.year, month: +personForm.month,
-          day: +personForm.day, hour: +personForm.hour, gender: personForm.gender,
-        });
-      }
-      console.log("[saju] savePerson result:", res);
-      if (res.error) { console.error("[saju] savePerson error:", res.error); alert("저장 실패: " + res.error.message); }
-      else console.log("[saju] savePerson success");
-    } catch (e) {
-      console.error("[saju] savePerson exception:", e);
+    const payload = {
+      name: personForm.name, year: +personForm.year, month: +personForm.month,
+      day: +personForm.day, hour: +personForm.hour, gender: personForm.gender,
+    };
+    const isEdit = editingPersonId && editingPersonId !== "new";
+    console.log("[saju] savePerson", isEdit ? "UPDATE" : "INSERT", payload);
+    if (isEdit) {
+      supabase.from("people").update(payload).eq("id", editingPersonId).then((res: any) => {
+        console.log("[saju] update result:", res);
+        if (res.error) alert("수정 실패: " + res.error.message);
+        loadPeople();
+        setPersonForm({ name: "", year: "", month: "", day: "", hour: -1, gender: "M" });
+        setEditingPersonId(null);
+      }).catch((e: any) => console.error("[saju] update catch:", e));
+    } else {
+      supabase.from("people").insert({ ...payload, user_id: user.id }).then((res: any) => {
+        console.log("[saju] insert result:", res);
+        if (res.error) alert("저장 실패: " + res.error.message);
+        loadPeople();
+        setPersonForm({ name: "", year: "", month: "", day: "", hour: -1, gender: "M" });
+        setEditingPersonId(null);
+      }).catch((e: any) => console.error("[saju] insert catch:", e));
     }
-    await loadPeople();
-    setPersonForm({ name: "", year: "", month: "", day: "", hour: -1, gender: "M" });
-    setEditingPersonId(null);
   }
 
   async function deletePerson(id: string) {
