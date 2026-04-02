@@ -271,7 +271,7 @@ export default function Page() {
 
   async function savePerson() {
     if (!supabase || !user || !personForm.name || !personForm.year || !personForm.month || !personForm.day) return;
-    if (editingPersonId) {
+    if (editingPersonId && editingPersonId !== "new") {
       await supabase.from("people").update({
         name: personForm.name, year: +personForm.year, month: +personForm.month,
         day: +personForm.day, hour: +personForm.hour, gender: personForm.gender,
@@ -821,7 +821,7 @@ export default function Page() {
               {editingPersonId !== null && (
                 <div style={{ background: "#F7F7FA", border: "1px solid #E2E2E8", borderRadius: 8, padding: 16, marginBottom: 16 }}>
                   <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.20em", textTransform: "uppercase", color: "#9898A4", marginBottom: 12 }}>
-                    {editingPersonId ? "정보 수정" : "새 사람 추가"}
+                    {editingPersonId && editingPersonId !== "new" ? "정보 수정" : "새 사람 추가"}
                   </p>
                   <input style={{ width: "100%", background: "#FFFFFF", border: "1px solid #C8C8D0", borderRadius: 4, padding: "8px 12px", fontFamily: "'Geist Mono', monospace", fontSize: 12, color: "#111116", outline: "none", marginBottom: 8 }}
                     type="text" placeholder="이름" value={personForm.name} onChange={e => setPersonForm(p => ({ ...p, name: e.target.value }))} />
