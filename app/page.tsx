@@ -295,11 +295,7 @@ export default function Page() {
 
   async function setAsDefault(person: any) {
     if (!supabase || !user) return;
-    await supabase.from("profiles").upsert({
-      id: user.id, name: person.name, year: person.year, month: person.month,
-      day: person.day, hour: person.hour, gender: person.gender, updated_at: new Date().toISOString(),
-    }, { onConflict: "id" });
-    // Reload with new profile
+    // Only switch active chat context — do NOT overwrite the profiles table
     setForm({ name: person.name, year: String(person.year), month: String(person.month), day: String(person.day), hour: person.hour, gender: person.gender });
     const r = calcAll(person.year, person.month, person.day, person.hour ?? 11, person.gender);
     const ctx = sajuToPromptContext(r, person.gender, person.year, person.month, person.day);
