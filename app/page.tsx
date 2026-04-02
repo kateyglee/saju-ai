@@ -63,6 +63,7 @@ export default function Page() {
   const [gunghapAddMode, setGunghapAddMode] = useState(false); // adding new person inline for 궁합
   const [gunghapForm, setGunghapForm] = useState<PartnerForm>({ name: "", year: "", month: "", day: "", hour: -1, gender: "M" });
   const abortRef = useRef<AbortController | null>(null);
+  const composingRef = useRef(false);
 
   // ── Load chat history list ──
   async function loadChatHistory(userId: string, sb: any) {
@@ -823,13 +824,14 @@ export default function Page() {
         {showGunghapPicker && (
           <div className="fade-in" style={{ padding: "12px 28px 0", flexShrink: 0 }}>
             <div style={{ background: "#FFFFFF", border: "1px solid #E2E2E8", borderRadius: 10, padding: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
                 <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, fontWeight: 600, letterSpacing: "0.16em", textTransform: "uppercase", color: "#9898A4", margin: 0 }}>궁합 상대 선택</p>
                 <button onClick={() => { setShowGunghapPicker(false); setGunghapPending(null); setGunghapAddMode(false); }}
                   style={{ background: "none", border: "none", cursor: "pointer", color: "#9898A4", padding: 2 }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
+              <p style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, color: "#6B6B78", margin: "0 0 12px" }}>궁합을 보고싶은 프로필을 선택해주세요</p>
 
               {!gunghapAddMode ? (
                 <>
@@ -907,7 +909,9 @@ export default function Page() {
               lineHeight: 1.5,
             }} placeholder="무엇이 궁금하세요?"
               value={input} onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && send()} />
+              onCompositionStart={() => { composingRef.current = true; }}
+              onCompositionEnd={() => { composingRef.current = false; }}
+              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && !composingRef.current && !e.nativeEvent.isComposing) send(); }} />
             <button onClick={() => loading ? stopGeneration() : send()} disabled={!loading && !input.trim()} style={{
               width: 32, height: 32, flexShrink: 0,
               background: loading ? "#2E2E38" : (!input.trim() ? "#EFEFF2" : "linear-gradient(135deg, #F2F2F5, #C8C8D0, #9898A8)"),
