@@ -922,17 +922,17 @@ export default function Page() {
               <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: "#9898A4" }}>궁합 분석 중</span>
             </div>
           )}
-          <div style={{ display: "flex", gap: 10, background: "#FFFFFF", border: "1px solid #C8C8D0", borderRadius: "8px", padding: "10px 12px", transition: "border-color 0.15s" }}
+          <div style={{ display: "flex", gap: 10, alignItems: "flex-end", background: "#FFFFFF", border: "1px solid #C8C8D0", borderRadius: "8px", padding: "10px 12px", transition: "border-color 0.15s" }}
             onFocus={() => { }} >
-            <input style={{
-              flex: 1, background: "transparent", border: "none", outline: "none",
+            <textarea style={{
+              flex: 1, background: "transparent", border: "none", outline: "none", resize: "none",
               fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, color: "#111116",
-              lineHeight: 1.5,
-            }} placeholder={gunghapPartner ? `${form.name || "나"} & ${gunghapPartner.name} 궁합에 대해 물어보세요` : "무엇이 궁금하세요?"}
-              value={input} onChange={e => setInput(e.target.value)}
+              lineHeight: 1.5, maxHeight: 120, overflow: "auto",
+            }} rows={1} placeholder={gunghapPartner ? `${form.name || "나"} & ${gunghapPartner.name} 궁합에 대해 물어보세요` : "무엇이 궁금하세요?"}
+              value={input} onChange={e => { setInput(e.target.value); e.target.style.height = "auto"; e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px"; }}
               onCompositionStart={() => { composingRef.current = true; }}
               onCompositionEnd={() => { composingRef.current = false; }}
-              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && !composingRef.current && !e.nativeEvent.isComposing) send(); }} />
+              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && !composingRef.current && !e.nativeEvent.isComposing) { e.preventDefault(); send(); } }} />
             <button onClick={() => loading ? stopGeneration() : send()} disabled={!loading && !input.trim()} style={{
               width: 32, height: 32, flexShrink: 0,
               background: loading ? "#2E2E38" : (!input.trim() ? "#EFEFF2" : "linear-gradient(135deg, #F2F2F5, #C8C8D0, #9898A8)"),
