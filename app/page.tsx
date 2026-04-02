@@ -835,12 +835,14 @@ export default function Page() {
                   </p>
                   <input style={{ width: "100%", background: "#FFFFFF", border: "1px solid #C8C8D0", borderRadius: 4, padding: "8px 12px", fontFamily: "'Geist Mono', monospace", fontSize: 12, color: "#111116", outline: "none", marginBottom: 8 }}
                     type="text" placeholder="이름" value={personForm.name} onChange={e => setPersonForm(p => ({ ...p, name: e.target.value }))} />
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6, marginBottom: 8 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 6 }}>
                     {([["년", "year", "1990"], ["월", "month", "3"], ["일", "day", "15"]] as const).map(([l, k, ph]) => (
                       <input key={k} style={{ background: "#FFFFFF", border: "1px solid #C8C8D0", borderRadius: 4, padding: "8px 10px", fontFamily: "'Geist Mono', monospace", fontSize: 12, color: "#111116", outline: "none" }}
                         type="number" placeholder={`${l} ${ph}`} value={(personForm as any)[k]} onChange={e => setPersonForm(p => ({ ...p, [k]: e.target.value }))} />
                     ))}
-                    <select style={{ background: "#FFFFFF", border: "1px solid #C8C8D0", borderRadius: 4, padding: "8px 6px", fontFamily: "'Geist Mono', monospace", fontSize: 11, color: "#111116", outline: "none" }}
+                  </div>
+                  <div style={{ marginBottom: 8 }}>
+                    <select style={{ width: "100%", background: "#FFFFFF", border: "1px solid #C8C8D0", borderRadius: 4, padding: "8px 10px", fontFamily: "'Geist Mono', monospace", fontSize: 12, color: "#111116", outline: "none" }}
                       value={personForm.hour} onChange={e => setPersonForm(p => ({ ...p, hour: +e.target.value }))}>
                       {HOURS.map((o: any) => <option key={o.v} value={o.v}>{o.l}</option>)}
                     </select>
