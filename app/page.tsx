@@ -57,6 +57,7 @@ export default function Page() {
   const [people, setPeople] = useState<any[]>([]);
   const [editingPersonId, setEditingPersonId] = useState<string | null>(null);
   const [personForm, setPersonForm] = useState<PartnerForm>({ name: "", year: "", month: "", day: "", hour: -1, gender: "M" });
+  const [activePersonId, setActivePersonId] = useState<string | null>(null);
 
   // ── Load chat history list ──
   async function loadChatHistory(userId: string, sb: any) {
@@ -312,7 +313,8 @@ export default function Page() {
     const r = calcAll(person.year, person.month, person.day, person.hour ?? 11, person.gender);
     const ctx = sajuToPromptContext(r, person.gender, person.year, person.month, person.day);
     setResult(r); setSajuCtx(ctx);
-    setShowPeopleModal(false);
+    setActivePersonId(person.id);
+    // Keep modal open — don't close
   }
 
   function editPerson(p: any) {
@@ -632,7 +634,7 @@ export default function Page() {
                   onMouseEnter={e => (e.currentTarget.style.background = "#EFEFF2")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4"/></svg>
                 </button>
-                <button title="사람들" onClick={() => { loadPeople(); setShowPeopleModal(true); }}
+                <button title="사주정보" onClick={() => { loadPeople(); setShowPeopleModal(true); }}
                   style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer", borderRadius: 6, color: "#9898A4" }}
                   onMouseEnter={e => (e.currentTarget.style.background = "#EFEFF2")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -798,7 +800,7 @@ export default function Page() {
             {/* Header */}
             <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #E2E2E8", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <p style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 16, fontWeight: 600, color: "#111116", margin: 0 }}>사람들</p>
+                <p style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 16, fontWeight: 600, color: "#111116", margin: 0 }}>사주정보</p>
                 <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: "#9898A4" }}>{people.length}명</span>
               </div>
               <button onClick={() => { setShowPeopleModal(false); setEditingPersonId(null); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#9898A4", padding: 4 }}>
@@ -858,7 +860,7 @@ export default function Page() {
               )}
               {/* People list */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.20em", textTransform: "uppercase", color: "#9898A4", margin: 0 }}>저장된 사람들</p>
+                <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: "0.20em", textTransform: "uppercase", color: "#9898A4", margin: 0 }}>등록된 사주 정보</p>
                 {editingPersonId === null && (
                   <button onClick={() => { setPersonForm({ name: "", year: "", month: "", day: "", hour: -1, gender: "M" }); setEditingPersonId("new"); }}
                     style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "'Geist Mono', monospace", fontSize: 10, color: "#2E2E38", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
@@ -867,10 +869,10 @@ export default function Page() {
                   </button>
                 )}
               </div>
-              {people.length === 0 ? (
+              {(() => { const filtered = people.filter((p: any) => p.id !== activePersonId); return filtered.length === 0 ? (
                 <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11, color: "#9898A4", textAlign: "center", padding: "20px 0" }}>아직 추가된 사람이 없습니다</p>
               ) : (
-                people.map((p: any) => {
+                filtered.map((p: any) => {
                   let saju: Saju | null = null;
                   try { saju = calcSaju(p.year, p.month, p.day, p.hour ?? -1); } catch {}
                   const dp = saju?.dp;
@@ -909,7 +911,7 @@ export default function Page() {
                     </div>
                   );
                 })
-              )}
+              ); })()}
             </div>
           </div>
         </div>
