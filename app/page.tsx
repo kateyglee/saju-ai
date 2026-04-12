@@ -671,7 +671,7 @@ export default function Page() {
 
               {/* 사주 정보 추가 버튼 */}
               <div style={{ padding: "8px 10px 0", flexShrink: 0 }}>
-                <button onClick={() => setShowPartner(!showPartner)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: "transparent", border: "0.5px dashed #C8C8D0", borderRadius: 6, cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, color: "#9898A4", transition: "all 0.12s" }}
+                <button onClick={() => setShowPartner(!showPartner)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: "transparent", border: "0.5px dashed #C8C8D0", borderRadius: 6, cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, color: "#9898A4", transition: "all 0.12s" }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#F7F7FA"; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
                   사주 정보 추가
@@ -685,7 +685,7 @@ export default function Page() {
               {[{ icon: "M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z", label: "새 채팅", action: () => startNewChat() },
                 { icon: "M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z", label: "검색", action: () => {} }
               ].map(item => (
-                <button key={item.label} onClick={item.action} style={{ width: "100%", display: "flex", alignItems: "center", height: 32, padding: "0 10px", borderRadius: 6, cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, fontWeight: 400, color: "#3A3A44", background: "transparent", border: "none", gap: 10, transition: "background 0.12s" }}
+                <button key={item.label} onClick={item.action} style={{ width: "100%", display: "flex", alignItems: "center", height: 32, padding: "0 10px", borderRadius: 6, cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 16, fontWeight: 400, color: "#3A3A44", background: "transparent", border: "none", gap: 10, transition: "background 0.12s" }}
                   onMouseEnter={e => (e.currentTarget.style.background = "#F7F7FA")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B6B78" strokeWidth="2"><path d={item.icon}/></svg>
                   <span>{item.label}</span>
