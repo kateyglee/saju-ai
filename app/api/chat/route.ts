@@ -72,12 +72,25 @@ const SYSTEM_PROMPT = `당신은 Aura — 한국 전통 명리학(사주팔자) 
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, sajuContext } = await req.json();
+    const { messages, sajuContext, today } = await req.json();
 
-    // 오늘 날짜 (KST)
-    const now = new Date(Date.now() + 9 * 60 * 60 * 1000);
-    const todayStr = `${now.getUTCFullYear()}년 ${now.getUTCMonth()+1}월 ${now.getUTCDate()}일 ${["일","월","화","수","목","금","토"][now.getUTCDay()]}요일`;
-    const dailyPillar = todayPillar(now.getUTCFullYear(), now.getUTCMonth()+1, now.getUTCDate());
+    // 오늘 날짜: 클라이언트에서 전달받은 로컬 날짜 사용 (사용자 시간대 기준)
+    // fallback으로 서버 UTC 사용
+    let todayStr: string;
+    let y: number, m: number, d: number;
+    if (today) {
+      todayStr = today;
+      // "2026년 4월 11일 금요일" 형식에서 숫자 추출
+      const nums = today.match(/\d+/g);
+      y = nums ? +nums[0] : new Date().getFullYear();
+      m = nums ? +nums[1] : new Date().getMonth() + 1;
+      d = nums ? +nums[2] : new Date().getDate();
+    } else {
+      const now = new Date();
+      y = now.getFullYear(); m = now.getMonth() + 1; d = now.getDate();
+      todayStr = `${y}년 ${m}월 ${d}일`;
+    }
+    const dailyPillar = todayPillar(y, m, d);
 
     // 스트리밍 응답
     const stream = await client.messages.stream({

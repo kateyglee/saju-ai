@@ -481,7 +481,7 @@ export default function Page() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: newMsgs, sajuContext: gunghapPartner ? gunghapCtx : sajuCtx }),
+        body: JSON.stringify({ messages: newMsgs, sajuContext: gunghapPartner ? gunghapCtx : sajuCtx, today: new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", weekday: "long" }) }),
         signal: controller.signal,
       });
       if (!res.ok) throw new Error();
