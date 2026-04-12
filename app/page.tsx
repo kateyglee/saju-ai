@@ -332,6 +332,22 @@ export default function Page() {
 
   async function setAsDefault(person: any) {
     if (!supabase || !user) return;
+    // Save current profile to people table if not already there (prevent data loss)
+    if (form.name && form.year) {
+      const currentName = form.name;
+      const currentYear = +form.year;
+      const currentMonth = +form.month;
+      const currentDay = +form.day;
+      // Check if current profile already exists in people table
+      const { data: existing } = await supabase.from("people").select("id").eq("user_id", user.id)
+        .eq("name", currentName).eq("year", currentYear).eq("month", currentMonth).eq("day", currentDay).limit(1);
+      if (!existing || existing.length === 0) {
+        await supabase.from("people").insert({
+          user_id: user.id, name: currentName, year: currentYear, month: currentMonth,
+          day: currentDay, hour: form.hour, gender: form.gender,
+        });
+      }
+    }
     // Update profiles table so it persists across refreshes
     await supabase.from("profiles").upsert({
       id: user.id, name: person.name, year: person.year, month: person.month,
@@ -342,6 +358,7 @@ export default function Page() {
     const ctx = sajuToPromptContext(r, person.gender, person.year, person.month, person.day);
     setResult(r); setSajuCtx(ctx);
     setActivePersonId(person.id);
+    await loadPeople(); // Refresh list to show saved profile
     // Keep modal open
   }
 
