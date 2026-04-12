@@ -1,6 +1,25 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest } from "next/server";
 
+// 오늘의 일진(日辰) 계산
+const CG = ["갑","을","병","정","무","기","경","신","임","계"];
+const CG_HJ = ["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"];
+const JJ = ["자","축","인","묘","진","사","오","미","신","유","술","해"];
+const JJ_HJ = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
+const OH = ["목","화","토","금","수"];
+const OH_HJ = ["木","火","土","金","水"];
+const CG_OH = [0,0,1,1,2,2,3,3,4,4];
+const JJ_OH = [4,2,0,0,2,1,1,2,3,3,2,4];
+function todayPillar(y: number, m: number, d: number) {
+  const a = Math.floor((14-m)/12);
+  const yy = y+4800-a;
+  const mm = m+12*a-3;
+  const jdn = d + Math.floor((153*mm+2)/5) + 365*yy + Math.floor(yy/4) - Math.floor(yy/100) + Math.floor(yy/400) - 32045;
+  const i = (jdn+49) % 60;
+  const cg = i%10, jj = i%12;
+  return `${CG[cg]}${JJ[jj]}(${CG_HJ[cg]}${JJ_HJ[jj]}) — ${OH[CG_OH[cg]]}(${OH_HJ[CG_OH[cg]]})/${OH[JJ_OH[jj]]}(${OH_HJ[JJ_OH[jj]]})`;
+}
+
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const SYSTEM_PROMPT = `당신은 Aura — 한국 전통 명리학(사주팔자) 전문 AI 상담사입니다.
@@ -55,11 +74,16 @@ export async function POST(req: NextRequest) {
   try {
     const { messages, sajuContext } = await req.json();
 
+    // 오늘 날짜 (KST)
+    const now = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const todayStr = `${now.getUTCFullYear()}년 ${now.getUTCMonth()+1}월 ${now.getUTCDate()}일 ${["일","월","화","수","목","금","토"][now.getUTCDay()]}요일`;
+    const dailyPillar = todayPillar(now.getUTCFullYear(), now.getUTCMonth()+1, now.getUTCDate());
+
     // 스트리밍 응답
     const stream = await client.messages.stream({
       model: "claude-sonnet-4-6",
       max_tokens: 4096,
-      system: SYSTEM_PROMPT + "\n\n" + sajuContext,
+      system: SYSTEM_PROMPT + `\n\n[오늘 날짜]\n${todayStr}\n\n[오늘의 일진(日辰)]\n${dailyPillar}\n→ 오늘의 운세 질문 시 이 일진과 사용자 사주의 상호작용을 분석하세요\n\n` + sajuContext,
       messages,
     });
 
