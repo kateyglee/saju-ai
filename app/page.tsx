@@ -685,7 +685,7 @@ export default function Page() {
               {[{ icon: "M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z", label: "새 채팅", action: () => startNewChat() },
                 { icon: "M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z", label: "검색", action: () => {} }
               ].map(item => (
-                <button key={item.label} onClick={item.action} style={{ width: "100%", display: "flex", alignItems: "center", height: 32, padding: "0 10px", borderRadius: 6, cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 16, fontWeight: 400, color: "#3A3A44", background: "transparent", border: "none", gap: 10, transition: "background 0.12s" }}
+                <button key={item.label} onClick={item.action} style={{ width: "100%", display: "flex", alignItems: "center", height: 32, padding: "0 10px", borderRadius: 6, cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, fontWeight: 400, color: "#3A3A44", background: "transparent", border: "none", gap: 10, transition: "background 0.12s" }}
                   onMouseEnter={e => (e.currentTarget.style.background = "#F7F7FA")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B6B78" strokeWidth="2"><path d={item.icon}/></svg>
                   <span>{item.label}</span>
@@ -715,7 +715,7 @@ export default function Page() {
                       <button onClick={() => { setSessionId(session.id); setMessages(session.messages || []); setMenuOpenId(null); }} style={{
                         width: "100%", display: "flex", alignItems: "center", height: 32, padding: "0 10px",
                         borderRadius: 6, cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif",
-                        fontSize: 16, color: isActive ? "#111116" : "#3A3A44",
+                        fontSize: 14, color: isActive ? "#111116" : "#3A3A44",
                         background: isActive ? "#EFEFF2" : "transparent", border: "none",
                         gap: 8, transition: "background 0.12s", textAlign: "left",
                       }}
