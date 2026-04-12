@@ -637,7 +637,7 @@ export default function Page() {
             {/* 내 사주 */}
             {result && (<>
               <div style={{ padding: "8px 20px 4px", flexShrink: 0 }}>
-                <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, fontWeight: 500, letterSpacing: "0.20em", textTransform: "uppercase", color: "#9898A4", margin: 0 }}>내 사주</p>
+                <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 12, fontWeight: 500, letterSpacing: "0.20em", textTransform: "uppercase", color: "#9898A4", margin: 0 }}>내 사주</p>
               </div>
               <div style={{ padding: "0 10px", flexShrink: 0 }}>
                 <div style={{ background: "#F7F7FA", border: "0.5px solid #E2E2E8", borderRadius: 8, padding: 10 }}>
@@ -698,7 +698,7 @@ export default function Page() {
 
             {/* 채팅 히스토리 */}
             <div style={{ flex: 1, overflowY: "auto", padding: "8px 10px 0" }}>
-              <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, fontWeight: 500, letterSpacing: "0.20em", textTransform: "uppercase", color: "#9898A4", padding: "4px 10px 6px", margin: 0 }}>최근 채팅</p>
+              <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 12, fontWeight: 500, letterSpacing: "0.20em", textTransform: "uppercase", color: "#9898A4", padding: "4px 10px 6px", margin: 0 }}>최근 채팅</p>
               {chatHistory.length === 0 ? (
                 <div style={{ display: "flex", alignItems: "center", height: 32, padding: "0 10px", borderRadius: 6, color: "#9898A4" }}>
                   <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: "#9898A4" }}>채팅 기록이 여기에 표시됩니다</span>
@@ -715,7 +715,7 @@ export default function Page() {
                       <button onClick={() => { setSessionId(session.id); setMessages(session.messages || []); setMenuOpenId(null); }} style={{
                         width: "100%", display: "flex", alignItems: "center", height: 32, padding: "0 10px",
                         borderRadius: 6, cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif",
-                        fontSize: 13, color: isActive ? "#111116" : "#3A3A44",
+                        fontSize: 16, color: isActive ? "#111116" : "#3A3A44",
                         background: isActive ? "#EFEFF2" : "transparent", border: "none",
                         gap: 8, transition: "background 0.12s", textAlign: "left",
                       }}
@@ -833,7 +833,7 @@ export default function Page() {
                 background: m.role === "user" ? "#EFEFF2" : "#FFFFFF",
                 border: `1px solid ${m.role === "user" ? "#C8C8D0" : "#E2E2E8"}`,
                 borderRadius: m.role === "user" ? "8px 2px 8px 8px" : "2px 8px 8px 8px",
-                fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, lineHeight: 1.7,
+                fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 16, lineHeight: 1.7,
               }}>
                 {renderContent(m.content, m.role === "user")}
               </div>
@@ -854,10 +854,10 @@ export default function Page() {
           <div style={{ padding: "16px 28px 0", display: "flex", flexWrap: "wrap", gap: 6 }}>
             {["성격과 적성 분석해줘", "올해 운세는?", "현재 대운 해석해줘", "직업운 알려줘", "연애운이 궁금해", "재물운 분석해줘"].map(q => (
               <button key={q} onClick={() => setInput(q)} style={{
-                padding: "6px 14px", background: "transparent",
+                padding: "8px 16px", background: "transparent",
                 border: "1px solid #C8C8D0", borderRadius: "9999px",
-                fontFamily: "'Geist Mono', monospace", fontSize: 10, fontWeight: 500,
-                letterSpacing: "0.06em", color: "#6B6B78", cursor: "pointer",
+                fontFamily: "'Geist Mono', monospace", fontSize: 16, fontWeight: 500,
+                letterSpacing: "0.02em", color: "#6B6B78", cursor: "pointer",
                 transition: "all 0.12s",
               }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(46,46,56,0.25)"; e.currentTarget.style.color = "#3A3A44"; }}
@@ -969,7 +969,7 @@ export default function Page() {
             onFocus={() => { }} >
             <textarea style={{
               flex: 1, background: "transparent", border: "none", outline: "none", resize: "none",
-              fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, color: "#111116",
+              fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 16, color: "#111116",
               lineHeight: 1.5, maxHeight: 120, overflow: "auto",
             }} rows={1} placeholder={gunghapPartner ? `${form.name || "나"} & ${gunghapPartner.name} 궁합에 대해 물어보세요` : "무엇이 궁금하세요?"}
               value={input} onChange={e => { setInput(e.target.value); e.target.style.height = "auto"; e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px"; }}
