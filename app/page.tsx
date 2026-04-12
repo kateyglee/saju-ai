@@ -64,8 +64,23 @@ export default function Page() {
   const [gunghapForm, setGunghapForm] = useState<PartnerForm>({ name: "", year: "", month: "", day: "", hour: -1, gender: "M" });
   const [gunghapPartner, setGunghapPartner] = useState<any>(null); // active 궁합 partner for badge + context
   const [gunghapCtx, setGunghapCtx] = useState<string>(""); // combined saju context when 궁합 active
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<"account">("account");
   const abortRef = useRef<AbortController | null>(null);
   const composingRef = useRef(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  // ── Close profile menu on click outside ──
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    }
+    if (showProfileMenu) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showProfileMenu]);
 
   // ── Load chat history list ──
   async function loadChatHistory(userId: string, sb: any) {
@@ -734,25 +749,47 @@ export default function Page() {
             </div>
 
             {/* 풋터 */}
-            <div style={{ borderTop: "1px solid #E2E2E8", padding: "8px 10px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#EFEFF2", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ borderTop: "1px solid #E2E2E8", padding: "8px 10px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, position: "relative" }}>
+              {/* 프로필 아바타 + flyout */}
+              <div style={{ position: "relative" }} ref={profileMenuRef}>
+                <button onClick={() => setShowProfileMenu(!showProfileMenu)}
+                  style={{ width: 28, height: 28, borderRadius: "50%", background: "#EFEFF2", display: "flex", alignItems: "center", justifyContent: "center", border: "none", cursor: "pointer" }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "#E2E2E8")} onMouseLeave={e => (e.currentTarget.style.background = "#EFEFF2")}>
                   <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 600, color: "#2E2E38" }}>{user?.email?.slice(0,1).toUpperCase() || "U"}</span>
-                </div>
-                <span style={{ flex: 1 }} />
+                </button>
+                {/* Flyout menu */}
+                {showProfileMenu && (
+                  <div style={{ position: "absolute", bottom: 36, left: 0, background: "#fff", border: "1px solid #E2E2E8", borderRadius: 8, boxShadow: "0 4px 16px rgba(0,0,0,0.1)", minWidth: 180, padding: "4px 0", zIndex: 50, animation: "fadeIn 0.1s ease" }}>
+                    <button onClick={() => { setShowProfileMenu(false); setSettingsTab("account"); setShowSettingsModal(true); }}
+                      style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", background: "none", border: "none", cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, color: "#111116" }}
+                      onMouseEnter={e => (e.currentTarget.style.background = "#F7F7FA")} onMouseLeave={e => (e.currentTarget.style.background = "none")}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                      내 정보
+                    </button>
+                    <button onClick={() => { setShowProfileMenu(false); loadPeople(); setShowPeopleModal(true); }}
+                      style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", background: "none", border: "none", cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, color: "#111116" }}
+                      onMouseEnter={e => (e.currentTarget.style.background = "#F7F7FA")} onMouseLeave={e => (e.currentTarget.style.background = "none")}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                      등록된 사주
+                    </button>
+                    <div style={{ height: 1, background: "#E2E2E8", margin: "4px 0" }} />
+                    <button onClick={async () => { setShowProfileMenu(false); if (supabase) { await supabase.auth.signOut(); } setUser(null); setStep("login"); }}
+                      style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", background: "none", border: "none", cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, color: "#E04040" }}
+                      onMouseEnter={e => (e.currentTarget.style.background = "#FFF5F5")} onMouseLeave={e => (e.currentTarget.style.background = "none")}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                      로그아웃
+                    </button>
+                  </div>
+                )}
               </div>
               <div style={{ display: "flex", gap: 1 }}>
-                <button title="사주 다시 입력" onClick={() => { setStep("form"); setMessages([]); setResult(null); setPartnerSaju(null); setSideSecondary(false); }}
-                  style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer", borderRadius: 6, color: "#9898A4" }}
-                  onMouseEnter={e => (e.currentTarget.style.background = "#EFEFF2")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4"/></svg>
-                </button>
-                <button title="사주정보" onClick={() => { loadPeople(); setShowPeopleModal(true); }}
+                <button title="등록된 사주" onClick={() => { loadPeople(); setShowPeopleModal(true); }}
                   style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer", borderRadius: 6, color: "#9898A4" }}
                   onMouseEnter={e => (e.currentTarget.style.background = "#EFEFF2")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 </button>
-                <button title="설정" style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer", borderRadius: 6, color: "#9898A4" }}
+                <button title="설정" onClick={() => { setSettingsTab("account"); setShowSettingsModal(true); }}
+                  style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer", borderRadius: 6, color: "#9898A4" }}
                   onMouseEnter={e => (e.currentTarget.style.background = "#EFEFF2")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                 </button>
@@ -1139,6 +1176,96 @@ export default function Page() {
                   );
                 })
               ); })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 설정(내 정보) 모달 ── */}
+      {showSettingsModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+          onClick={() => setShowSettingsModal(false)}>
+          <div style={{ background: "#FFFFFF", borderRadius: 12, width: "100%", maxWidth: 620, maxHeight: "80vh", boxShadow: "0 8px 24px rgba(0,0,0,0.15)", animation: "fadeIn 0.15s ease", display: "flex", overflow: "hidden" }}
+            onClick={e => e.stopPropagation()}>
+            {/* 왼쪽 사이드 탭 */}
+            <div style={{ width: 160, background: "#FAFAFA", borderRight: "1px solid #E2E2E8", padding: "20px 0", flexShrink: 0 }}>
+              <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 600, letterSpacing: "0.20em", textTransform: "uppercase", color: "#9898A4", padding: "0 16px", marginBottom: 12 }}>설정</p>
+              {([["account", "내 정보", "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"]] as const).map(([key, label, icon]) => (
+                <button key={key} onClick={() => setSettingsTab(key as any)}
+                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", background: settingsTab === key ? "#FFFFFF" : "transparent", border: "none", borderRight: settingsTab === key ? "2px solid #111116" : "2px solid transparent", cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: settingsTab === key ? 600 : 400, color: settingsTab === key ? "#111116" : "#6B6B78" }}
+                  onMouseEnter={e => { if (settingsTab !== key) e.currentTarget.style.background = "#F0F0F3"; }}
+                  onMouseLeave={e => { if (settingsTab !== key) e.currentTarget.style.background = "transparent"; }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d={icon}/></svg>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {/* 오른쪽 콘텐츠 */}
+            <div style={{ flex: 1, padding: "20px 28px", overflowY: "auto" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+                <p style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 16, fontWeight: 600, color: "#111116", margin: 0 }}>내 정보</p>
+                <button onClick={() => setShowSettingsModal(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#9898A4", padding: 4 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+
+              {/* 프로필 정보 */}
+              <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24, paddingBottom: 24, borderBottom: "1px solid #E2E2E8" }}>
+                <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#EFEFF2", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 16, fontWeight: 600, color: "#2E2E38" }}>{user?.email?.slice(0,1).toUpperCase() || "U"}</span>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 15, fontWeight: 600, color: "#111116", margin: 0 }}>{form.name || "사용자"}</p>
+                  <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 12, color: "#6B6B78", margin: "2px 0 0" }}>{user?.email || ""}</p>
+                </div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={() => { setShowSettingsModal(false); setStep("form"); }}
+                    style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", background: "#FFFFFF", border: "1px solid #E2E2E8", borderRadius: 6, cursor: "pointer", color: "#6B6B78" }}
+                    title="정보 수정"
+                    onMouseEnter={e => (e.currentTarget.style.background = "#F7F7FA")} onMouseLeave={e => (e.currentTarget.style.background = "#FFFFFF")}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                  </button>
+                  <button onClick={async () => { setShowSettingsModal(false); if (supabase) await supabase.auth.signOut(); setUser(null); setStep("login"); }}
+                    style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", background: "#FFFFFF", border: "1px solid #E2E2E8", borderRadius: 6, cursor: "pointer", color: "#E04040" }}
+                    title="로그아웃"
+                    onMouseEnter={e => (e.currentTarget.style.background = "#FFF5F5")} onMouseLeave={e => (e.currentTarget.style.background = "#FFFFFF")}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* 사주 정보 */}
+              {form.year && (
+                <div style={{ marginBottom: 24, paddingBottom: 24, borderBottom: "1px solid #E2E2E8" }}>
+                  <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 600, letterSpacing: "0.20em", textTransform: "uppercase", color: "#9898A4", marginBottom: 10 }}>사주 정보</p>
+                  <div style={{ background: "#F7F7FA", border: "1px solid #E2E2E8", borderRadius: 8, padding: "14px 16px" }}>
+                    <p style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, color: "#111116", margin: "0 0 4px" }}>
+                      {form.year}년 {form.month}월 {form.day}일 · {form.gender === "F" ? "여성" : "남성"}
+                    </p>
+                    {result?.saju?.dp && (
+                      <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11, color: "#6B6B78", margin: 0 }}>
+                        일간: {CG[result.saju.dp.cg]}{JJ[result.saju.dp.jj]}({CG_HJ[result.saju.dp.cg]}{JJ_HJ[result.saju.dp.jj]}) · {result.currentDaeun ? `${CG[result.currentDaeun.cg]}${JJ[result.currentDaeun.jj]} 대운` : ""}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* 요금제 */}
+              <div>
+                <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 600, letterSpacing: "0.20em", textTransform: "uppercase", color: "#9898A4", marginBottom: 10 }}>요금제</p>
+                <div style={{ background: "#F7F7FA", border: "1px solid #E2E2E8", borderRadius: 8, padding: "16px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div>
+                    <p style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, fontWeight: 600, color: "#111116", margin: "0 0 2px" }}>Free</p>
+                    <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11, color: "#6B6B78", margin: 0 }}>기본 사주 상담</p>
+                  </div>
+                  <button style={{ padding: "7px 16px", background: "#2E2E38", border: "none", borderRadius: 6, cursor: "pointer", fontFamily: "'Geist Mono', monospace", fontSize: 10, fontWeight: 600, letterSpacing: "0.08em", color: "#fff", display: "flex", alignItems: "center", gap: 6 }}
+                    onMouseEnter={e => (e.currentTarget.style.background = "#1A1A24")} onMouseLeave={e => (e.currentTarget.style.background = "#2E2E38")}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                    UPGRADE
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
