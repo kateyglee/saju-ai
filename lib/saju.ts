@@ -249,33 +249,44 @@ export function analyzeSajuRelations(saju: Saju): string[] {
 }
 
 // ── 용신(用神) 추정 ─────────────────────────────────────────────────────────
-// 간단한 억부법 기반: 일간이 강하면 설기/극기하는 오행이 용신, 약하면 생조하는 오행이 용신
-export function estimateYongsin(saju: Saju): { yongsin: string; yongsinOh: number; reason: string } {
+// 억부법 기반: 신강 → 관성(나를 극하는 오행) 우선, 신약 → 인성(나를 생하는 오행) 우선
+export function estimateYongsin(saju: Saju): { yongsin: string; yongsinOh: number; heeshin: string; heeshinOh: number; reason: string } {
   const dayCg = saju.dp.cg;
   const dayOh = CG_OH[dayCg];
   const counts = ohCounts(saju);
 
   // 일간 강약 판단: 비겁(같은 오행) + 인성(나를 생하는 오행) 개수
-  const SANG_CYCLE = [4,0,1,2,3]; // 수→목, 목→화, 화→토, 토→금, 금→수
-  const bigyeop = counts[dayOh]; // 같은 오행
-  const insung = counts[SANG_CYCLE[dayOh]]; // 나를 생하는 오행
+  const SANG_CYCLE = [4,0,1,2,3]; // 나를 생하는 오행: 수→목, 목→화, 화→토, 토→금, 금→수
+  const bigyeop = counts[dayOh]; // 같은 오행 (비겁)
+  const insung = counts[SANG_CYCLE[dayOh]]; // 나를 생하는 오행 (인성)
   const strength = bigyeop + insung;
   const total = counts.reduce((a,b) => a+b, 0);
 
   const isStrong = strength > total / 2;
 
-  // 상생 순서: 목→화→토→금→수→목
+  // 오행 관계
+  // 상생: 목→화→토→금→수→목
+  const KEUK_ME = [3,4,0,1,2]; // 나를 극하는 오행 (관성): 금→목, 수→화, 목→토, 화→금, 토→수
+  const I_KEUK = [2,3,4,0,1]; // 내가 극하는 오행 (재성): 목→토, 화→금, 토→수, 금→목, 수→화
   const NEXT = [1,2,3,4,0]; // 내가 생하는 오행 (식상)
-  const KEUK = [2,3,4,0,1]; // 내가 극하는 오행 (재성)
 
   if (isStrong) {
-    // 강하면: 식상(설기) 또는 재성(소모)이 용신
-    const sikOh = NEXT[dayOh];
-    return { yongsin: OH[sikOh], yongsinOh: sikOh, reason: `일간이 강함(비겁+인성=${strength}) → ${OH[sikOh]}(설기)이 필요` };
+    // 신강: 1순위 관성(나를 극하는 오행), 2순위 재성(내가 극하는 오행)
+    const gwanOh = KEUK_ME[dayOh]; // 관성 = 나를 극하는 오행
+    const jaeOh = I_KEUK[dayOh];   // 재성 = 내가 극하는 오행
+    return {
+      yongsin: OH[gwanOh], yongsinOh: gwanOh,
+      heeshin: OH[jaeOh], heeshinOh: jaeOh,
+      reason: `신강(비겁+인성=${strength}/${total}) → 용신: ${OH[gwanOh]}(관성, 직접 제어) / 희신: ${OH[jaeOh]}(재성, 에너지 소모)`
+    };
   } else {
-    // 약하면: 인성(생조) 또는 비겁(도움)이 용신
+    // 신약: 1순위 인성(나를 생하는 오행), 2순위 비겁(같은 오행)
     const insungOh = SANG_CYCLE[dayOh];
-    return { yongsin: OH[insungOh], yongsinOh: insungOh, reason: `일간이 약함(비겁+인성=${strength}) → ${OH[insungOh]}(생조)이 필요` };
+    return {
+      yongsin: OH[insungOh], yongsinOh: insungOh,
+      heeshin: OH[dayOh], heeshinOh: dayOh,
+      reason: `신약(비겁+인성=${strength}/${total}) → 용신: ${OH[insungOh]}(인성, 생조) / 희신: ${OH[dayOh]}(비겁, 도움)`
+    };
   }
 }
 
@@ -331,8 +342,9 @@ ${pillars}
 ${ohDesc}
 ${ohAnalysis}
 
-[용신(用神) 추정]
-${ys.yongsin}(${OH_HJ[ys.yongsinOh]}) — ${ys.reason}
+[용신(用神)/희신(喜神) 추정]
+용신: ${ys.yongsin}(${OH_HJ[ys.yongsinOh]}) / 희신: ${ys.heeshin}(${OH_HJ[ys.heeshinOh]})
+${ys.reason}
 
 [합(合)/충(沖)/형(刑) 분석]
 ${relDesc}
