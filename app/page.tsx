@@ -658,17 +658,18 @@ export default function Page() {
               </div>
               <div style={{ padding: "0 10px", flexShrink: 0 }}>
                 <div style={{ background: "#F7F7FA", border: "0.5px solid #E2E2E8", borderRadius: 8, padding: 10 }}>
-                  {/* 이름 + caret */}
+                  {/* 이름 + chevron + refresh */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                    <button onClick={() => setSideSecondary(true)} title="상세 정보" style={{ display: "flex", alignItems: "center", gap: 5, background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
                       <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#2E2E38", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 8, fontWeight: 600, color: "#fff" }}>{form.name ? form.name.slice(0,1) : "나"}</span>
                       </div>
                       <span style={{ fontSize: 13, fontWeight: 500, color: "#111116" }}>{form.name || "내 사주"}</span>
-                    </div>
-                    <button onClick={() => setSideSecondary(true)} title="상세 정보" style={{ width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer", borderRadius: 4, color: "#9898A4" }}
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9898A4" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+                    </button>
+                    <button onClick={() => { loadPeople(); setShowPeopleModal(true); }} title="등록된 사주" style={{ width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer", borderRadius: 4, color: "#9898A4" }}
                       onMouseEnter={e => (e.currentTarget.style.background = "#E2E2E8")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                     </button>
                   </div>
                   {/* 사주 4기둥 */}
@@ -738,7 +739,6 @@ export default function Page() {
                       }}
                         onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "#F7F7FA"; }}
                         onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9898A4" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{preview}{firstUserMsg ? "" : " ✨"}</span>
                       </button>
                       {/* 3-dot menu */}
