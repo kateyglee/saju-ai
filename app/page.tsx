@@ -561,13 +561,18 @@ export default function Page() {
   async function send(override?: string) {
     const txt = override ?? input;
     if (!txt.trim() || loading) return;
-    // Check for 궁합 keywords — skip if already in 궁합 mode
+    // Check for 궁합 keywords — show user message first, then open picker
     if (!gunghapPartner && isGunghapQuery(txt)) {
+      const userMsg: Message = { role: "user", content: txt };
+      setMessages(prev => [...prev, userMsg]);
       setGunghapPending(txt);
       setInput("");
-      setShowGunghapPicker(true);
-      setGunghapAddMode(false);
-      loadPeople();
+      // Small delay so user sees their message before picker opens
+      setTimeout(() => {
+        setShowGunghapPicker(true);
+        setGunghapAddMode(false);
+        loadPeople();
+      }, 300);
       return;
     }
     const userMsg: Message = { role: "user", content: txt };
