@@ -70,6 +70,7 @@ export default function Page() {
   const abortRef = useRef<AbortController | null>(null);
   const composingRef = useRef(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+  const profileLoadedRef = useRef(false); // Guard against double loadProfile calls
 
   // ── Close profile menu on click outside ──
   useEffect(() => {
@@ -95,39 +96,101 @@ export default function Page() {
 
   // ── Load saved profile and jump to chat if exists ──
   async function loadProfile(userId: string, sb?: any) {
+    // Prevent concurrent/duplicate calls (race between useEffect and onAuthStateChange)
+    if (profileLoadedRef.current) { console.log("[saju] loadProfile: already loaded, skipping"); return; }
+    profileLoadedRef.current = true;
     const s = sb || supabase;
-    if (!s) { console.log("[saju] loadProfile: no supabase client"); setStep("form"); return; }
+    if (!s) { console.log("[saju] loadProfile: no supabase client"); profileLoadedRef.current = false; setStep("form"); return; }
     console.log("[saju] loadProfile: querying profiles for", userId);
     const { data: profile, error } = await s.from("profiles").select("*").eq("id", userId).maybeSingle();
     console.log("[saju] loadProfile result:", { profile, error: error?.message });
-    if (error) { console.log("[saju] profile query error, showing form"); setStep("form"); return; }
-    if (!profile) { console.log("[saju] no profile found, showing form"); setStep("form"); return; }
+    if (error) { console.log("[saju] profile query error, showing form"); profileLoadedRef.current = false; setStep("form"); return; }
+    if (!profile) { console.log("[saju] no profile found, showing form"); profileLoadedRef.current = false; setStep("form"); return; }
     if (profile.year && profile.month && profile.day) {
+      // Load people list first
+      const { data: ppl } = await s.from("people").select("*").eq("user_id", userId).order("created_at", { ascending: false });
+      setPeople(ppl || []);
+
+      // Resolve the default person via default_person_id (new) or auto-migrate (old)
+      console.log("[saju] profile.default_person_id:", profile.default_person_id, "people count:", (ppl || []).length, "people ids:", (ppl || []).map((p: any) => p.id + "=" + p.name));
+      let defaultPersonId: string | null = profile.default_person_id || null;
+      if (defaultPersonId && ppl) {
+        const found = ppl.find((p: any) => p.id === defaultPersonId);
+        if (!found) defaultPersonId = null; // ID invalid, re-migrate
+      }
+      if (!defaultPersonId) {
+        // Migration: find or create a people entry matching profile data
+        const matches = (ppl || []).filter((p: any) =>
+          p.name === (profile.name || "") && +p.year === profile.year && +p.month === profile.month && +p.day === profile.day
+        );
+        if (matches.length > 0) {
+          defaultPersonId = matches[0].id;
+          // Clean up duplicate entries (keep only the one we're using as default)
+          if (matches.length > 1) {
+            const dupeIds = matches.slice(1).map((p: any) => p.id);
+            console.log("[saju] cleaning up duplicate people entries:", dupeIds);
+            for (const dupeId of dupeIds) {
+              await s.from("people").delete().eq("id", dupeId);
+            }
+          }
+        } else {
+          // Create new people entry from profile data
+          const { data: newP } = await s.from("people").insert({
+            user_id: userId, name: profile.name || "", year: profile.year,
+            month: profile.month, day: profile.day, hour: profile.hour ?? 11, gender: profile.gender || "F",
+          }).select("id").single();
+          if (newP) defaultPersonId = newP.id;
+        }
+        // Persist the link
+        if (defaultPersonId) {
+          await s.from("profiles").update({ default_person_id: defaultPersonId }).eq("id", userId);
+        }
+        // Refresh people list after cleanup/insert
+        const { data: ppl2 } = await s.from("people").select("*").eq("user_id", userId).order("created_at", { ascending: false });
+        setPeople(ppl2 || []);
+      } else {
+        // Even when default_person_id exists, clean up any duplicates of the default person
+        const defaultP = (ppl || []).find((p: any) => p.id === defaultPersonId);
+        if (defaultP) {
+          const dupes = (ppl || []).filter((p: any) =>
+            p.id !== defaultPersonId && p.name === defaultP.name && +p.year === +defaultP.year && +p.month === +defaultP.month && +p.day === +defaultP.day
+          );
+          if (dupes.length > 0) {
+            console.log("[saju] cleaning up duplicate people entries:", dupes.map((d: any) => d.id));
+            for (const dupe of dupes) {
+              await s.from("people").delete().eq("id", dupe.id);
+            }
+            const { data: ppl2 } = await s.from("people").select("*").eq("user_id", userId).order("created_at", { ascending: false });
+            setPeople(ppl2 || []);
+          }
+        }
+      }
+      setActivePersonId(defaultPersonId);
+      console.log("[saju] activePersonId set to:", defaultPersonId);
+
+      // Load form data from the default PERSON (people table), not profiles flat columns
+      // This ensures consistency — people table is the source of truth
+      const defaultPerson = defaultPersonId
+        ? (people.length > 0 ? people : (ppl || [])).find((p: any) => p.id === defaultPersonId)
+        : null;
+      const src = defaultPerson || profile; // fallback to profile data
       const f: Form = {
-        name: profile.name || "",
-        year: String(profile.year),
-        month: String(profile.month),
-        day: String(profile.day),
-        hour: profile.hour ?? 11,
-        gender: profile.gender || "F",
+        name: src.name || "",
+        year: String(src.year),
+        month: String(src.month),
+        day: String(src.day),
+        hour: src.hour ?? 11,
+        gender: src.gender || "F",
       };
       setForm(f);
-      const r = calcAll(profile.year, profile.month, profile.day, profile.hour ?? 11, f.gender);
-      const ctx = sajuToPromptContext(r, f.gender, profile.year, profile.month, profile.day);
+      const r = calcAll(+src.year, +src.month, +src.day, src.hour ?? 11, f.gender);
+      const ctx = sajuToPromptContext(r, f.gender, +src.year, +src.month, +src.day);
       setResult(r); setSajuCtx(ctx);
       const dp = r.saju.dp;
       const cd = r.currentDaeun;
       const sy = new Date().getFullYear();
       const greeting = `안녕하세요, ${f.name || ""}님. ${f.year}년 ${f.month}월 ${f.day}일생 ${f.gender === "F" ? "여성" : "남성"}분의 사주를 불러왔습니다.\n\n일간(日干)은 **${CG[dp.cg]}${JJ[dp.jj]}(${CG_HJ[dp.cg]}${JJ_HJ[dp.jj]})**으로 이것이 당신의 핵심 기운입니다.\n\n현재 **${cd ? CG[cd.cg] + JJ[cd.jj] + " 대운" : "대운 산출 중"}** 흐름이며, **${sy}년 ${CG[r.seun.cg]}${JJ[r.seun.jj]} 세운**이 운세에 영향을 주고 있어요.\n\n무엇이든 물어보세요.`;
       setStep("chat");
-
-      // Try to load the most recent chat session, or create a new one
-      const { data: existingSession } = await s.from("chat_sessions")
-        .select("id, messages")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
 
       // Load chat history list
       const history = await loadChatHistory(userId, s);
@@ -181,9 +244,6 @@ export default function Page() {
       if (u) {
         try {
           await loadProfile(u.id, sb);
-          // Load people list
-          const { data: ppl } = await sb.from("people").select("*").eq("user_id", u.id).order("created_at", { ascending: false });
-          setPeople(ppl || []);
           console.log("[saju] loadProfile done, step will be chat or form");
         } catch (e) {
           console.log("[saju] loadProfile error:", e);
@@ -203,6 +263,7 @@ export default function Page() {
           if (event === "SIGNED_IN" && authUser) {
             try { await loadProfile(authUser.id, sb); } catch { setStep("form"); }
           } else if (event === "SIGNED_OUT" || !authUser) {
+            profileLoadedRef.current = false; // Reset so next sign-in can load
             setStep("login");
           }
         });
@@ -246,19 +307,33 @@ export default function Page() {
 
     // ── Save profile & create chat session in Supabase ──
     if (user && supabase) {
-      supabase.from("profiles").upsert({
-        id: user.id,
-        name: form.name,
-        year: +form.year,
-        month: +form.month,
-        day: +form.day,
-        hour: +form.hour,
-        gender: form.gender,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: "id" }).then(({ error: e }: any) => {
-        if (e) console.log("[saju] profile save error:", e.message);
-        else console.log("[saju] profile saved");
-      });
+      // Check if a people entry already exists (avoid duplicates)
+      supabase.from("people").select("id").eq("user_id", user.id)
+        .eq("name", form.name).eq("year", +form.year).eq("month", +form.month).eq("day", +form.day)
+        .limit(1).then(async ({ data: existing }: any) => {
+          let dpId: string | null = existing?.[0]?.id || null;
+          if (!dpId) {
+            // Create people entry
+            const { data: newPerson, error: pErr } = await supabase.from("people").insert({
+              user_id: user.id, name: form.name, year: +form.year, month: +form.month,
+              day: +form.day, hour: +form.hour, gender: form.gender,
+            }).select("id").single();
+            if (pErr) console.log("[saju] people insert error:", pErr.message);
+            dpId = newPerson?.id || null;
+          }
+          if (dpId) {
+            setActivePersonId(dpId);
+            setPeople([{ id: dpId, user_id: user.id, name: form.name, year: +form.year, month: +form.month, day: +form.day, hour: +form.hour, gender: form.gender }]);
+          }
+          supabase.from("profiles").upsert({
+            id: user.id, name: form.name, year: +form.year, month: +form.month,
+            day: +form.day, hour: +form.hour, gender: form.gender,
+            default_person_id: dpId, updated_at: new Date().toISOString(),
+          }, { onConflict: "id" }).then(({ error: e }: any) => {
+            if (e) console.log("[saju] profile save error:", e.message);
+            else console.log("[saju] profile saved with default_person_id:", dpId);
+          });
+        });
 
       supabase.from("chat_sessions").insert({
         user_id: user.id,
@@ -309,6 +384,14 @@ export default function Page() {
       supabase.from("people").update(payload).eq("id", editingPersonId).then((res: any) => {
         console.log("[saju] update result:", res);
         if (res.error) alert("수정 실패: " + res.error.message);
+        // If editing the default person, sync form + profiles
+        if (editingPersonId === activePersonId) {
+          setForm({ name: payload.name, year: String(payload.year), month: String(payload.month), day: String(payload.day), hour: payload.hour, gender: payload.gender });
+          const r2 = calcAll(payload.year, payload.month, payload.day, payload.hour ?? 11, payload.gender);
+          const ctx2 = sajuToPromptContext(r2, payload.gender, payload.year, payload.month, payload.day);
+          setResult(r2); setSajuCtx(ctx2);
+          supabase.from("profiles").update({ name: payload.name, year: payload.year, month: payload.month, day: payload.day, hour: payload.hour, gender: payload.gender, updated_at: new Date().toISOString() }).eq("id", user.id);
+        }
         loadPeople();
         setPersonForm({ name: "", year: "", month: "", day: "", hour: -1, gender: "M" });
         setEditingPersonId(null);
@@ -326,40 +409,38 @@ export default function Page() {
 
   async function deletePerson(id: string) {
     if (!supabase || !user) return;
+    // If deleting the default person, clear the link first
+    if (id === activePersonId) {
+      await supabase.from("profiles").update({ default_person_id: null }).eq("id", user.id);
+      setActivePersonId(null);
+    }
     await supabase.from("people").delete().eq("id", id);
     setPeople(prev => prev.filter(p => p.id !== id));
   }
 
   async function setAsDefault(person: any) {
     if (!supabase || !user) return;
-    // Save current profile to people table if not already there (prevent data loss)
-    if (form.name && form.year) {
-      const currentName = form.name;
-      const currentYear = +form.year;
-      const currentMonth = +form.month;
-      const currentDay = +form.day;
-      // Check if current profile already exists in people table
-      const { data: existing } = await supabase.from("people").select("id").eq("user_id", user.id)
-        .eq("name", currentName).eq("year", currentYear).eq("month", currentMonth).eq("day", currentDay).limit(1);
-      if (!existing || existing.length === 0) {
-        await supabase.from("people").insert({
-          user_id: user.id, name: currentName, year: currentYear, month: currentMonth,
-          day: currentDay, hour: form.hour, gender: form.gender,
-        });
-      }
+    console.log("[saju] setAsDefault:", person.id, person.name);
+    // Update profiles — use upsert for reliability (RLS-safe)
+    const { error, data: updated } = await supabase.from("profiles").upsert({
+      id: user.id,
+      default_person_id: person.id,
+      name: person.name, year: person.year, month: person.month,
+      day: person.day, hour: person.hour, gender: person.gender,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "id" }).select("default_person_id").single();
+    console.log("[saju] setAsDefault result:", { error: error?.message, updated });
+    if (error) { console.error("[saju] setAsDefault error:", error.message); alert("대표사주 변경 실패: " + error.message); return; }
+    // Verify the update actually persisted
+    if (updated?.default_person_id !== person.id) {
+      console.error("[saju] setAsDefault: default_person_id not persisted!", { expected: person.id, got: updated?.default_person_id });
     }
-    // Update profiles table so it persists across refreshes
-    await supabase.from("profiles").upsert({
-      id: user.id, name: person.name, year: person.year, month: person.month,
-      day: person.day, hour: person.hour, gender: person.gender, updated_at: new Date().toISOString(),
-    }, { onConflict: "id" });
+    // Update local state
     setForm({ name: person.name, year: String(person.year), month: String(person.month), day: String(person.day), hour: person.hour, gender: person.gender });
     const r = calcAll(person.year, person.month, person.day, person.hour ?? 11, person.gender);
     const ctx = sajuToPromptContext(r, person.gender, person.year, person.month, person.day);
     setResult(r); setSajuCtx(ctx);
     setActivePersonId(person.id);
-    await loadPeople(); // Refresh list to show saved profile
-    // Keep modal open
   }
 
   function editPerson(p: any) {
@@ -1072,6 +1153,7 @@ export default function Page() {
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <p style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 16, fontWeight: 600, color: "#111116", margin: 0 }}>사주정보</p>
                 <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: "#9898A4" }}>{people.length}명</span>
+
               </div>
               <button onClick={() => { setShowPeopleModal(false); setEditingPersonId(null); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#9898A4", padding: 4 }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -1156,7 +1238,12 @@ export default function Page() {
                   </button>
                 )}
               </div>
-              {(() => { const filtered = people.filter((p: any) => p.id !== activePersonId); return filtered.length === 0 ? (
+              {(() => { const filtered = people.filter((p: any) => {
+                if (p.id === activePersonId) return false;
+                // Also filter any duplicate of the default person (same name+birthday)
+                if (form.name && form.year && p.name === form.name && +p.year === +form.year && +p.month === +form.month && +p.day === +form.day) return false;
+                return true;
+              }); return filtered.length === 0 ? (
                 <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11, color: "#9898A4", textAlign: "center", padding: "20px 0" }}>아직 추가된 사람이 없습니다</p>
               ) : (
                 filtered.map((p: any) => {
